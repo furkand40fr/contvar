@@ -244,31 +244,384 @@ h1.title .accent {
   margin-top: 2px;
 }
 
-/* ---------- Architecture placeholder ---------- */
-.architecture-slot {
+/* ---------- Architecture figure ---------- */
+.architecture-figure {
   min-height: 96mm;
-  border: 1.5px dashed rgba(11, 83, 148, 0.35);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
-    linear-gradient(135deg, rgba(11,83,148,0.035), rgba(20,184,166,0.035)),
+    linear-gradient(180deg, rgba(11,83,148,0.035), rgba(20,184,166,0.03)),
     var(--surface);
   box-shadow: var(--shadow);
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.arch-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.arch-title {
+  margin: 0;
+  color: var(--primary);
+  font-size: 16pt;
+  line-height: 1.1;
+  font-weight: 800;
+}
+.arch-subtitle {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 9.4pt;
+  line-height: 1.35;
+}
+.arch-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+  max-width: 165mm;
+}
+.arch-chip {
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.72);
+  color: var(--ink-soft);
+  font-size: 7.3pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.arch-chip.go { color: var(--violet); background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.18); }
+.arch-chip.dms { color: var(--accent-2); background: rgba(20,184,166,0.09); border-color: rgba(20,184,166,0.20); }
+.arch-chip.out { color: var(--primary); background: rgba(11,83,148,0.08); border-color: rgba(11,83,148,0.18); }
+.arch-flow {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.05fr 22px 1fr 22px 1.26fr 22px 1fr 22px 1.12fr;
+  gap: 7px;
+  align-items: stretch;
+}
+.arch-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.82);
+  padding: 10px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.arch-card.encoder {
+  border-color: rgba(11,83,148,0.30);
+  background:
+    linear-gradient(180deg, rgba(11,83,148,0.075), rgba(255,255,255,0.78)),
+    var(--surface);
+}
+.arch-card.decoder {
+  border-color: rgba(20,184,166,0.30);
+  background:
+    linear-gradient(180deg, rgba(20,184,166,0.08), rgba(255,255,255,0.78)),
+    var(--surface);
+}
+.arch-stage {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 12mm;
-  color: var(--muted);
+  gap: 7px;
 }
-.architecture-slot strong {
+.arch-num {
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  font-weight: 800;
+  font-size: 9.5pt;
+}
+.arch-h {
+  font-size: 10.2pt;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.16;
+}
+.arch-kicker {
+  font-size: 7.1pt;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.arch-p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 8.1pt;
+  line-height: 1.32;
+}
+.arch-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 16pt;
+  font-weight: 300;
+}
+.asset-slot {
+  min-height: 24mm;
+  border: 1.4px dashed rgba(11,83,148,0.30);
+  border-radius: 9px;
+  background:
+    linear-gradient(135deg, rgba(11,83,148,0.04), rgba(20,184,166,0.035)),
+    var(--surface-2);
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+.asset-slot.output { border-color: rgba(20,184,166,0.34); }
+.asset-slot.figure-slot {
+  grid-template-columns: 1fr;
+  min-height: 31mm;
+  padding: 5px;
+  border-style: solid;
+  background: var(--surface);
+  overflow: hidden;
+}
+.arch-image {
+  width: 100%;
+  height: 31mm;
+  object-fit: contain;
+  object-position: center;
   display: block;
+  border-radius: 7px;
+}
+.asset-note {
+  color: var(--muted);
+  font-size: 7.4pt;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.protein-mini,
+.app-mini {
+  width: 52px;
+  height: 52px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  display: grid;
+  place-items: center;
+}
+.protein-mini svg,
+.app-mini svg {
+  width: 44px;
+  height: 44px;
+  overflow: visible;
+}
+.feature-list,
+.head-list,
+.output-list {
+  display: grid;
+  gap: 4px;
+  margin-top: auto;
+}
+.feature-item,
+.head-item,
+.output-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--surface-2);
+  padding: 5px 6px;
+  color: var(--ink-soft);
+  font-size: 7.6pt;
+  line-height: 1.2;
+}
+.feature-item strong,
+.head-item strong,
+.output-item strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+.feature-dot {
+  display: inline-block;
+  vertical-align: middle;
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+.feature-item > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.feature-dot.spatial { background: var(--accent); }
+.feature-dot.random { background: var(--warm); }
+.encoder-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.encoder-layer {
+  border: 1px solid rgba(11,83,148,0.16);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.62);
+  padding: 6px 7px;
+  min-height: 29mm;
+}
+.encoder-layer .layer-title {
   color: var(--primary);
-  font-size: 15pt;
+  font-size: 7.5pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   margin-bottom: 4px;
 }
-.architecture-slot span {
-  font-size: 9pt;
+.encoder-layer p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 7.5pt;
+  line-height: 1.3;
 }
+.training-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.train-branch {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.68);
+  padding: 7px;
+}
+.train-branch.go { border-color: rgba(124,58,237,0.20); background: rgba(124,58,237,0.055); }
+.train-branch.dms { border-color: rgba(20,184,166,0.22); background: rgba(20,184,166,0.060); }
+.train-branch .branch-title {
+  font-size: 7.6pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
+}
+.train-branch.go .branch-title { color: var(--violet); }
+.train-branch.dms .branch-title { color: var(--accent-2); }
+.triplet-mini {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 5px;
+}
+.triplet-pill {
+  display: grid;
+  place-items: center;
+  height: 22px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 800;
+  font-size: 8pt;
+}
+.triplet-pill.a { background: var(--primary); }
+.triplet-pill.p { background: var(--benign); }
+.triplet-pill.n { background: var(--pathogenic); }
+.embedding-bar {
+  display: grid;
+  grid-template-columns: 0.95fr 1.15fr;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 7px;
+  border: 1px solid rgba(11,83,148,0.16);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.72);
+}
+.embedding-dots {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+}
+.embedding-dots span {
+  height: 8px;
+  border-radius: 3px;
+  background: rgba(11,83,148,0.22);
+}
+.embedding-dots span:nth-child(2n) { background: rgba(20,184,166,0.28); }
+.embedding-dots span:nth-child(3n) { background: rgba(245,158,11,0.34); }
+.go-heads {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.go-head {
+  padding: 6px 5px;
+  text-align: center;
+  border-radius: 8px;
+  border: 1px solid rgba(20,184,166,0.22);
+  background: rgba(255,255,255,0.72);
+}
+.go-head strong {
+  display: block;
+  color: var(--accent-2);
+  font-size: 9.5pt;
+  line-height: 1;
+}
+.go-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 6.9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.delta-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 8px;
+  font-size: 7.2pt;
+}
+.delta-table th,
+.delta-table td {
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+}
+.delta-table th {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 6.7pt;
+  background: var(--surface-2);
+}
+.delta-table td:last-child,
+.delta-table th:last-child { text-align: right; }
+.loss { color: var(--pathogenic); font-weight: 800; }
+.gain { color: var(--benign); font-weight: 800; }
+.arch-bottom {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 8px;
+}
+.arch-caption {
+  border-left: 3px solid var(--accent);
+  background: rgba(20,184,166,0.055);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--ink-soft);
+  font-size: 8pt;
+  line-height: 1.35;
+}
+.arch-caption strong { color: var(--ink); }
 
 /* ---------- System overview band ---------- */
 .overview {
@@ -856,7 +1209,7 @@ ul.clean li::before {
     <div class="ov-step">
       <span class="ov-num">B</span>
       <div class="ov-body">
-        <span class="ov-h">Featurization & Graph Constructionh</span>
+        <span class="ov-h">Featurization & Graph Construction</span>
         <span class="ov-p">SALAD edges · ESM-2 ⊕ AA one-hot nodes</span>
       </div>
     </div>
@@ -878,11 +1231,163 @@ ul.clean li::before {
     </div>
   </section>
 
-  <!-- =================== ARCHITECTURE PLACEHOLDER =================== -->
-  <section class="architecture-slot" aria-label="Architecture diagram placeholder">
-    <div>
-      <strong>Architecture Diagram Placeholder</strong>
-      <span>Add the final pipeline figure here: structure + variant input → graph encoder with GO pretraining → contrastive variant embedding → GO decoder → Hugging Face Space output.</span>
+  <!-- =================== ARCHITECTURE FIGURE =================== -->
+  <section class="architecture-figure" aria-label="ContVAR architecture diagram">
+    <div class="arch-top">
+      <div>
+        <h2 class="arch-title">ContVAR Architecture</h2>
+        <div class="arch-subtitle">A graph encoder learns function-aware protein and variant embeddings; a supervised decoder translates embedding changes into per-GO-term gain / loss scores.</div>
+      </div>
+      <div class="arch-legend" aria-label="Architecture legend">
+        <span class="arch-chip go">Phase 0 GO pretraining</span>
+        <span class="arch-chip dms">Phase 1 DMS contrastive</span>
+        <span class="arch-chip out">WT vs variant readout</span>
+      </div>
+    </div>
+
+    <div class="arch-flow">
+      <div class="arch-card">
+        <div class="arch-stage">
+          <span class="arch-num">1</span>
+          <div>
+            <div class="arch-h">Input protein</div>
+            <div class="arch-kicker">Structure + SAV</div>
+          </div>
+        </div>
+        <div class="asset-slot figure-slot" aria-label="Protein structure figure">
+          <img class="arch-image" src="3d%20protein%20structure.png" alt="3D protein ribbon structure with mutation site highlighted" />
+        </div>
+        <p class="arch-p">Wild-type sequence / structure and a single amino-acid variant define the paired inference inputs.</p>
+      </div>
+
+      <div class="arch-arrow">-&gt;</div>
+
+      <div class="arch-card">
+        <div class="arch-stage">
+          <span class="arch-num">2</span>
+          <div>
+            <div class="arch-h">Residue graph</div>
+            <div class="arch-kicker">SALAD-style topology</div>
+          </div>
+        </div>
+        <div class="asset-slot figure-slot" aria-label="Residue graph with index, spatial, and random edges">
+          <img class="arch-image" src="graph.png" alt="Residue graph showing index, spatial, and random edge types" />
+        </div>
+        <div class="feature-list">
+          <div class="feature-item"><span><span class="feature-dot"></span> ESM-2 + AA one-hot</span><strong>nodes</strong></div>
+          <div class="feature-item"><span><span class="feature-dot spatial"></span> sequence + spatial</span><strong>edges</strong></div>
+          <div class="feature-item"><span><span class="feature-dot random"></span> long-range samples</span><strong>context</strong></div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">-&gt;</div>
+
+      <div class="arch-card encoder">
+        <div class="arch-stage">
+          <span class="arch-num">3</span>
+          <div>
+            <div class="arch-h">Shared ContVAR encoder</div>
+            <div class="arch-kicker">Function-aware graph representation</div>
+          </div>
+        </div>
+        <div class="encoder-stack">
+          <div class="encoder-layer">
+            <div class="layer-title">Backbone</div>
+            <p>2x GATv2 with edge MLP, residual connections, LayerNorm, ELU, and attention heads.</p>
+          </div>
+          <div class="encoder-layer">
+            <div class="layer-title">Readouts</div>
+            <p>Global mean-pooled protein embedding plus local mutation-site embedding.</p>
+          </div>
+        </div>
+        <div class="training-grid">
+          <div class="train-branch go">
+            <div class="branch-title">Phase 0</div>
+            <p class="arch-p">GO semantic triplets warm-start the encoder through MF / BP / CC heads.</p>
+          </div>
+          <div class="train-branch dms">
+            <div class="branch-title">Phase 1</div>
+            <p class="arch-p">DMS triplets specialize variants with global + local contrastive loss.</p>
+            <div class="triplet-mini" aria-hidden="true">
+              <span class="triplet-pill a">A</span>
+              <span class="triplet-pill p">P</span>
+              <span class="triplet-pill n">N</span>
+            </div>
+          </div>
+        </div>
+        <div class="embedding-bar">
+          <div>
+            <div class="arch-h">256-D embedding</div>
+            <div class="arch-kicker">L2-normalized</div>
+          </div>
+          <div class="embedding-dots" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">-&gt;</div>
+
+      <div class="arch-card decoder">
+        <div class="arch-stage">
+          <span class="arch-num">4</span>
+          <div>
+            <div class="arch-h">GO decoder</div>
+            <div class="arch-kicker">Supervised multi-label heads</div>
+          </div>
+        </div>
+        <p class="arch-p">Decoder trains on native Swiss-Prot annotations, then scores WT and variant embeddings at inference time.</p>
+        <div class="go-heads" aria-label="GO decoder heads">
+          <div class="go-head"><strong>MF</strong><span>molecular</span></div>
+          <div class="go-head"><strong>BP</strong><span>process</span></div>
+          <div class="go-head"><strong>CC</strong><span>cellular</span></div>
+        </div>
+        <div class="head-list">
+          <div class="head-item"><span>Sigmoid per GO term</span><strong>p in [0,1]</strong></div>
+          <div class="head-item"><span>Zero-function unit</span><strong>LOF</strong></div>
+          <div class="head-item"><span>AUPRC threshold sweep</span><strong>calibrated</strong></div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">-&gt;</div>
+
+      <div class="arch-card">
+        <div class="arch-stage">
+          <span class="arch-num">5</span>
+          <div>
+            <div class="arch-h">Functional readout</div>
+            <div class="arch-kicker">WT - variant Delta score</div>
+          </div>
+        </div>
+        <table class="delta-table" aria-label="Example GO delta score output">
+          <thead>
+            <tr><th>GO term</th><th>WT</th><th>Var</th><th>Delta</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>binding</td><td>0.91</td><td>0.34</td><td class="loss">loss</td></tr>
+            <tr><td>transport</td><td>0.21</td><td>0.48</td><td class="gain">gain</td></tr>
+            <tr><td>zero-fn</td><td>0.04</td><td>0.72</td><td class="loss">LOF</td></tr>
+          </tbody>
+        </table>
+        <div class="asset-slot output" aria-label="Optional application screenshot placeholder">
+          <div class="app-mini" aria-hidden="true">
+            <svg viewBox="0 0 52 52">
+              <rect x="7" y="9" width="38" height="31" rx="4" fill="#f8fafc" stroke="#0b5394" stroke-width="2" />
+              <rect x="11" y="14" width="14" height="4" rx="2" fill="#0b5394" opacity="0.85" />
+              <rect x="11" y="22" width="30" height="3" rx="1.5" fill="#14b8a6" opacity="0.75" />
+              <rect x="11" y="29" width="24" height="3" rx="1.5" fill="#ef4444" opacity="0.68" />
+              <rect x="11" y="36" width="18" height="3" rx="1.5" fill="#f59e0b" opacity="0.78" />
+            </svg>
+          </div>
+          <div class="asset-note">Optional: replace with final CLI / Hugging Face Space screenshot or real output table.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arch-bottom">
+      <div class="arch-caption"><strong>Main message:</strong> ContVAR does not stop at damaging / neutral classification; it estimates which GO functions are likely reduced, gained, or fully lost by the variant.</div>
+      <div class="arch-caption"><strong>What to replace later:</strong> add a final demo screenshot or result table in stage 5 when the CLI / Hugging Face Space output is ready. The rest can remain as the architecture schematic.</div>
     </div>
   </section>
 
@@ -1033,6 +1538,11 @@ ul.clean li::before {
         </p>
       </section>
 
+    </div>
+
+    <!-- ============= RIGHT COLUMN ============= -->
+    <div class="col">
+
       <section class="sec">
         <span class="sec-eyebrow">Phase 1 / 2 — DMS specialization</span>
         <h2 class="sec-title">Joint global + local contrastive loss</h2>
@@ -1047,11 +1557,6 @@ ul.clean li::before {
           <strong>Local mutation-site learning.</strong> The model also compares residue-level embeddings at the mutation position, so the representation captures both whole-protein and local structural effects.
         </p>
       </section>
-
-    </div>
-
-    <!-- ============= RIGHT COLUMN ============= -->
-    <div class="col">
 
       <section class="sec">
         <span class="sec-eyebrow">Decoder · variant scoring</span>
