@@ -273,10 +273,11 @@ h1.title .accent {
 /* ---------- System overview band ---------- */
 .overview {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1.4fr auto 1fr auto 1.3fr;
-  gap: 8px;
+  grid-template-columns: 1fr auto 1.15fr auto 1.55fr auto 1.1fr;
+  gap: 10px;
   align-items: stretch;
-  padding: 13px 15px;
+  padding: 16px 18px;
+  min-height: 45mm;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
@@ -284,11 +285,20 @@ h1.title .accent {
     var(--surface);
   box-shadow: var(--shadow);
 }
+.overview-title {
+  grid-column: 1 / -1;
+  color: var(--primary);
+  font-size: 16pt;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 4px;
+  text-align: center;
+}
 .ov-step {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 13px;
+  padding: 15px 16px;
   border-radius: 9px;
   background: var(--surface);
   border: 1px solid var(--line-soft);
@@ -307,40 +317,47 @@ h1.title .accent {
     var(--surface);
 }
 .ov-num {
-  flex: 0 0 26px;
-  width: 26px; height: 26px;
+  flex: 0 0 auto;
+  inline-size: 34px;
+  block-size: 34px;
+  min-inline-size: 34px;
+  max-inline-size: 34px;
+  min-block-size: 34px;
+  max-block-size: 34px;
+  aspect-ratio: 1 / 1;
   display: grid; place-items: center;
-  border-radius: 50%;
+  border-radius: 999px;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   color: white;
   font-weight: 800;
-  font-size: 9pt;
+  font-size: 12pt;
 }
 .ov-encoder .ov-num { background: var(--primary); }
 .ov-decoder .ov-num { background: var(--accent-2); }
-.ov-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ov-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .ov-h {
-  font-size: 8.6pt;
+  font-size: 12pt;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.2;
 }
 .ov-h small {
-  font-size: 7pt;
+  font-size: 9pt;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   margin-left: 2px;
 }
 .ov-p {
-  font-size: 7.6pt;
+  font-size: 11pt;
   color: var(--ink-soft);
-  line-height: 1.3;
+  line-height: 1;
+  margin-top: 2px;
 }
 .ov-arrow {
   display: grid; place-items: center;
-  font-size: 12pt;
+  font-size: 16pt;
   color: var(--muted);
   font-weight: 300;
 }
@@ -386,7 +403,7 @@ h1.title .accent {
   color: var(--ink);
   margin: 0 0 2px;
 }
-.sec p { margin: 5px 0; color: var(--ink-soft); }
+.sec p { margin: 5px 0; color: var(--ink-soft); font-size: 11pt; }
 .sec p strong { color: var(--ink); }
 .sec p em { color: var(--ink); font-style: italic; }
 
@@ -426,11 +443,74 @@ ul.clean li::before {
 
 /* ---------- Triplet diagram ---------- */
 .triplet {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 0 2px;
+  margin: 9px 0 2px;
+  padding: 6px 16px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(11,83,148,0.025), rgba(20,184,166,0.018)),
+    var(--surface-2);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+}
+.triplet svg {
+  width: 95%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
+}
+.triplet .triplet-title {
+  fill: var(--primary);
+  font: 700 12px "Inter", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.triplet .triplet-note {
+  fill: var(--muted);
+  font: 600 9px "Inter", sans-serif;
+}
+.triplet .boundary-pos {
+  fill: rgba(16,185,129,0.055);
+  stroke: #10b981;
+  stroke-width: 1.7;
+}
+.triplet .boundary-neg {
+  fill: none;
+  stroke: #b94a48;
+  stroke-width: 1.7;
+}
+.triplet .vec-pos {
+  stroke: #10b981;
+  stroke-width: 4;
+}
+.triplet .vec-neg {
+  stroke: #b94a48;
+  stroke-width: 4;
+}
+.triplet .training-arrow {
+  fill: url(#triplet-training-gradient);
+  stroke: rgba(11,83,148,0.18);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.triplet .training-label {
+  fill: white;
+  font: 800 13px "Inter", sans-serif;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  dominant-baseline: central;
+  text-transform: uppercase;
+}
+.triplet .node-dot {
+  stroke: white;
+  stroke-width: 2;
+  filter: drop-shadow(0 2px 3px rgba(15,23,42,0.16));
+}
+.triplet .node-label {
+  fill: white;
+  font: 800 14px "Inter", sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 .node {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -459,6 +539,7 @@ ul.clean li::before {
 }
 .triplet-legend {
   display: flex; justify-content: space-between;
+  gap: 8px;
   font-size: 7.8pt; color: var(--muted); margin-top: 4px;
 }
 
@@ -760,23 +841,40 @@ ul.clean li::before {
     </div>
   </header>
 
-  <!-- =================== TL;DR STRIP =================== -->
-  <section class="tldr">
-    <div class="pill">
-      <span class="k">Module 1 · Encoder</span>
-      <span class="v">Self-supervised <small>2× GATv2 · contrastive triplet</small></span>
+
+  <!-- =================== SYSTEM OVERVIEW BAND =================== -->
+  <section class="overview" aria-label="ContVAR end-to-end system overview">
+    <h2 class="overview-title">ContVAR System Overview</h2>
+    <div class="ov-step">
+      <span class="ov-num">A</span>
+      <div class="ov-body">
+        <span class="ov-h">Data</span>
+        <span class="ov-p">Gene Ontology · ProteinGym DMS · PDB · AlphaFold2/3  </span>
+      </div>
     </div>
-    <div class="pill">
-      <span class="k">Module 2 · Decoder</span>
-      <span class="v">Supervised <small>multi-label GO classifier · MF / BP / CC</small></span>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step">
+      <span class="ov-num">B</span>
+      <div class="ov-body">
+        <span class="ov-h">Featurization & Graph Constructionh</span>
+        <span class="ov-p">SALAD edges · ESM-2 ⊕ AA one-hot nodes</span>
+      </div>
     </div>
-    <div class="pill">
-      <span class="k">Variant scoring</span>
-      <span class="v">Δscore = WT − var <small>per-GO function gain / loss</small></span>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step ov-encoder">
+      <span class="ov-num">C</span>
+      <div class="ov-body">
+        <span class="ov-h">ContVAR encoder &nbsp;<small>self-supervised</small></span>
+        <span class="ov-p">Phase 0 — GO pretraining &nbsp;·&nbsp; Phase 1 — DMS variant specialization &nbsp;·&nbsp; Learned 256-D embeddings</span>
+      </div>
     </div>
-    <div class="pill">
-      <span class="k">Deliverable</span>
-      <span class="v">CLI + HF Space <small>interactive variant prediction</small></span>
+    <div class="ov-arrow">→</div>
+    <div class="ov-step ov-decoder">
+      <span class="ov-num">D</span>
+      <div class="ov-body">
+        <span class="ov-h">GO decoder &nbsp;<small>supervised</small></span>
+        <span class="ov-p">MF · BP · CC heads &nbsp;·&nbsp; sigmoid per-term &nbsp;·&nbsp; Δ vs. wild-type</span>
+      </div>
     </div>
   </section>
 
@@ -785,49 +883,6 @@ ul.clean li::before {
     <div>
       <strong>Architecture Diagram Placeholder</strong>
       <span>Add the final pipeline figure here: structure + variant input → graph encoder with GO pretraining → contrastive variant embedding → GO decoder → Hugging Face Space output.</span>
-    </div>
-  </section>
-
-  <!-- =================== SYSTEM OVERVIEW BAND =================== -->
-  <section class="overview" aria-label="ContVAR end-to-end system overview">
-    <div class="ov-step">
-      <span class="ov-num">A</span>
-      <div class="ov-body">
-        <span class="ov-h">3D structure</span>
-        <span class="ov-p">AlphaFold2/3 · PDB · CIF</span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step">
-      <span class="ov-num">B</span>
-      <div class="ov-body">
-        <span class="ov-h">Residue graph</span>
-        <span class="ov-p">SALAD edges · ESM-2 ⊕ AA one-hot</span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step ov-encoder">
-      <span class="ov-num">C</span>
-      <div class="ov-body">
-        <span class="ov-h">ContVAR encoder &nbsp;<small>self-supervised</small></span>
-        <span class="ov-p">Phase 0 — GO triplets &nbsp;·&nbsp; Phase 1 / 2 — DMS global + local contrastive</span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step">
-      <span class="ov-num">D</span>
-      <div class="ov-body">
-        <span class="ov-h">256-D embedding</span>
-        <span class="ov-p">global · local (mutation site)</span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step ov-decoder">
-      <span class="ov-num">E</span>
-      <div class="ov-body">
-        <span class="ov-h">GO decoder &nbsp;<small>supervised</small></span>
-        <span class="ov-p">MF · BP · CC heads &nbsp;·&nbsp; sigmoid per-term &nbsp;·&nbsp; Δ vs. wild-type</span>
-      </div>
     </div>
   </section>
 
@@ -854,29 +909,57 @@ ul.clean li::before {
           <li><strong>Decoder</strong> — supervised multi-label GO classifier on top of those embeddings; variant effect is read off as <span class="mono">Δscore = score(WT) − score(variant)</span> per GO term.</li>
         </ul>
 
-        <div class="triplet">
-          <div class="node anchor">
-            <span class="ico">A</span>
-            <span>Anchor</span>
-            <span class="lbl">Wild-type</span>
-          </div>
-          <div class="arrow">⟶</div>
-          <div class="node benign">
-            <span class="ico">+</span>
-            <span>Positive</span>
-            <span class="lbl">Benign variant</span>
-          </div>
-          <div class="arrow">⟶</div>
-          <div class="node path">
-            <span class="ico">−</span>
-            <span>Negative</span>
-            <span class="lbl">Pathogenic variant</span>
-          </div>
-        </div>
-        <div class="triplet-legend">
-          <span>pull positives <strong style="color:var(--benign)">closer</strong></span>
-          <span>enforced jointly at <strong>graph</strong> &amp; <strong>mutation site</strong></span>
-          <span>push negatives <strong style="color:var(--pathogenic)">farther</strong></span>
+        <div class="triplet" aria-label="Triplet contrastive training moves positive variants closer to the anchor and negative variants farther away">
+          <svg viewBox="0 0 720 235" role="img">
+            <defs>
+              <linearGradient id="triplet-training-gradient" x1="335" y1="117" x2="449" y2="117" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#0b5394" stop-opacity="0.78" />
+                <stop offset="1" stop-color="#10b981" stop-opacity="0.82" />
+              </linearGradient>
+              <marker id="triplet-arrow-green" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#10b981" />
+              </marker>
+              <marker id="triplet-arrow-red" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#b94a48" />
+              </marker>
+            </defs>
+
+            <text class="triplet-title" x="170" y="16" text-anchor="middle">Before training</text>
+            <text class="triplet-title" x="550" y="16" text-anchor="middle">After training</text>
+
+            <g aria-label="Before training embedding space">
+              <circle class="boundary-neg" cx="170" cy="116" r="86" />
+              <circle class="boundary-pos" cx="170" cy="116" r="48" />
+              <line class="vec-pos" x1="170" y1="116" x2="249" y2="59" marker-end="url(#triplet-arrow-green)" />
+              <line class="vec-neg" x1="170" y1="116" x2="240" y2="151" marker-end="url(#triplet-arrow-red)" />
+              <circle class="node-dot" cx="170" cy="116" r="16" fill="#2563a8" />
+              <circle class="node-dot" cx="266" cy="46" r="16" fill="#10b981" />
+              <circle class="node-dot" cx="257" cy="160" r="16" fill="#b94a48" />
+              <text class="node-label" x="170" y="116">a</text>
+              <text class="node-label" x="266" y="46">p</text>
+              <text class="node-label" x="257" y="160">n</text>
+              <text class="triplet-note" x="170" y="220" text-anchor="middle">positive outside margin; negative too close</text>
+            </g>
+
+            <g aria-label="Training arrow">
+              <path class="training-arrow" d="M330 105 Q326 105 326 109 V125 Q326 129 330 129 H400 Q404 129 404 133 V138 Q404 143 408 140 L437 120 Q441 117 437 114 L408 94 Q404 91 404 96 V101 Q404 105 400 105 Z" />
+              <text class="training-label" x="372" y="118">TRAIN</text>
+            </g>
+
+            <g aria-label="After training embedding space">
+              <circle class="boundary-neg" cx="550" cy="116" r="86" />
+              <circle class="boundary-pos" cx="550" cy="116" r="48" />
+              <line class="vec-pos" x1="550" y1="116" x2="579" y2="78" marker-end="url(#triplet-arrow-green)" />
+              <line class="vec-neg" x1="550" y1="116" x2="614" y2="178" marker-end="url(#triplet-arrow-red)" />
+              <circle class="node-dot" cx="550" cy="116" r="16" fill="#2563a8" />
+              <circle class="node-dot" cx="588" cy="66" r="16" fill="#10b981" />
+              <circle class="node-dot" cx="626" cy="190" r="16" fill="#b94a48" />
+              <text class="node-label" x="550" y="116">a</text>
+              <text class="node-label" x="588" y="66">p</text>
+              <text class="node-label" x="626" y="190">n</text>
+              <text class="triplet-note" x="550" y="220" text-anchor="middle">positive pulled in; negative pushed out</text>
+            </g>
+          </svg>
         </div>
       </section>
 
@@ -940,14 +1023,6 @@ ul.clean li::before {
             <p><em>Global:</em> mean-pool → MLP → 256-D. <em>Local:</em> node features at the mutated residue → MLP → 256-D. <em>Phase 0:</em> separate MF / BP / CC heads on top of the global embedding.</p>
           </div>
         </div>
-
-        <div class="hp">
-          <div class="row"><span class="k">Encoder output</span><span class="v">256-D</span></div>
-          <div class="row"><span class="k">GATv2</span><span class="v">2 layers · 4 heads · hidden 128</span></div>
-          <div class="row"><span class="k">Margin (DMS)</span><span class="v">m = 0.30</span></div>
-          <div class="row"><span class="k">GO pretraining</span><span class="v">200 epochs</span></div>
-          <div class="row"><span class="k">Variant training</span><span class="v">200 epochs</span></div>
-        </div>
       </section>
 
       <section class="sec">
@@ -957,11 +1032,6 @@ ul.clean li::before {
           GO pretraining is part of encoder training, not a separate runtime module. Three ontology-specific heads share the encoder backbone and learn semantic relationships across Molecular Function, Biological Process, and Cellular Component. The best phase-0 checkpoint warm-starts variant specialization.
         </p>
       </section>
-
-    </div>
-
-    <!-- ============= RIGHT COLUMN ============= -->
-    <div class="col">
 
       <section class="sec">
         <span class="sec-eyebrow">Phase 1 / 2 — DMS specialization</span>
@@ -977,6 +1047,11 @@ ul.clean li::before {
           <strong>Local mutation-site learning.</strong> The model also compares residue-level embeddings at the mutation position, so the representation captures both whole-protein and local structural effects.
         </p>
       </section>
+
+    </div>
+
+    <!-- ============= RIGHT COLUMN ============= -->
+    <div class="col">
 
       <section class="sec">
         <span class="sec-eyebrow">Decoder · variant scoring</span>
