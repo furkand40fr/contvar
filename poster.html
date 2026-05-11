@@ -74,16 +74,16 @@ code, .mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; 
   align-items: end;
   gap: 12mm;
   padding-bottom: 7mm;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0;
   position: relative;
 }
 .header::after {
   content: "";
   position: absolute;
   left: 0; bottom: -1px;
-  width: 90mm;
+  width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
   border-radius: 2px;
 }
 
@@ -107,11 +107,11 @@ code, .mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; 
 }
 
 h1.title {
-  font-size: 32pt;
+  font-size: 41pt;
   line-height: 1.04;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin: 8px 0 6px;
+  margin: 10px 0 8px;
   color: var(--ink);
 }
 h1.title .accent {
@@ -121,10 +121,10 @@ h1.title .accent {
   color: transparent;
 }
 .subtitle {
-  font-size: 12pt;
+  font-size: 14pt;
   color: var(--ink-soft);
   font-weight: 400;
-  max-width: 250mm;
+  max-width: 300mm;
   margin: 0;
   line-height: 1.4;
 }
@@ -138,7 +138,7 @@ h1.title .accent {
 }
 .authors .author {
   font-weight: 600;
-  font-size: 10.5pt;
+  font-size: 12.5pt;
   color: var(--ink);
 }
 .authors .advisor {
@@ -150,11 +150,11 @@ h1.title .accent {
   color: var(--primary);
   border-radius: 7px;
   font-weight: 600;
-  font-size: 9pt;
+  font-size: 12pt;
 }
 .affiliation {
-  margin-top: 6px;
-  font-size: 8.6pt;
+  margin-top: 7px;
+  font-size: 9.5pt;
   color: var(--muted);
 }
 
@@ -162,36 +162,40 @@ h1.title .accent {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 12px;
   text-align: right;
 }
 .logo-card {
-  width: 92mm;
+  width: 115mm;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 11px 13px;
+  padding: 16.5px 19.5px;
   box-shadow: var(--shadow);
 }
 .logo-card .logo-row {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
+}
+.logo-card .logo-row > div:last-child {
+  flex: 1;
+  text-align: left;
 }
 .logo-marks {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex: 0 0 auto;
 }
 .logo-mark {
-  width: 34px;
-  height: 46px;
+  width: 51px;
+  height: 69px;
   display: grid; place-items: center;
 }
 .logo-mark.lab {
-  width: 50px;
+  width: 75px;
 }
 .logo-mark img {
   width: 100%;
@@ -200,8 +204,8 @@ h1.title .accent {
   object-position: center center;
   display: block;
 }
-.logo-card .uni { font-weight: 700; color: var(--ink); font-size: 9pt; line-height: 1.15; }
-.logo-card .dept { color: var(--muted); font-size: 7.8pt; margin-top: 2px; }
+.logo-card .uni { font-weight: 700; color: var(--ink); font-size: 13.5pt; line-height: 1.15; }
+.logo-card .dept { color: var(--muted); font-size: 11.7pt; margin-top: 3px; }
 
 /* ---------- TL;DR strip ---------- */
 .tldr {
@@ -355,18 +359,25 @@ h1.title .accent {
   display: flex; flex-direction: column; gap: 4px;
 }
 .sec-eyebrow {
-  font-size: 7.6pt;
+  font-size: 11pt;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.10em;
   color: var(--primary);
-  display: inline-flex; align-items: center; gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .sec-eyebrow::before {
   content: "";
-  width: 14px; height: 2px;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+  flex: 0 0 16px;
+  width: 16px;
+  height: 2px;
   border-radius: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
 }
 .sec-title {
   font-size: 14pt;
@@ -647,29 +658,26 @@ ul.clean li::before {
 .footer {
   display: grid;
   grid-template-columns: 1.45fr 1fr 0.85fr;
-  gap: 8mm;
-  padding-top: 7mm;
-  border-top: 1px solid var(--line);
+  gap: 10mm;
+  padding: 7mm;
+  border-top: 0;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  color: white;
   position: relative;
 }
 .footer::before {
-  content: "";
-  position: absolute;
-  right: 0; top: -1px;
-  width: 90mm;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--primary));
-  border-radius: 2px;
+  content: none;
 }
 .footer h3 {
   margin: 0 0 5px;
-  font-size: 8.4pt;
+  font-size: 9.4pt;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--primary);
+  color: white;
   font-weight: 700;
 }
-.footer p { margin: 3px 0; color: var(--ink-soft); font-size: 8.6pt; line-height: 1.45; }
+.footer p { margin: 3px 0; color: rgba(255, 255, 255, 0.88); font-size: 8.6pt; line-height: 1.45; }
 
 .qr-box {
   display: flex; align-items: center; gap: 12px;
@@ -692,7 +700,7 @@ ul.clean li::before {
 
 .refs {
   font-size: 7.8pt;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.82);
   line-height: 1.4;
 }
 .refs ol { padding-left: 14px; margin: 4px 0 0; }
@@ -717,7 +725,6 @@ ul.clean li::before {
   <!-- =================== HEADER =================== -->
   <header class="header">
     <div>
-      <span class="eyebrow"><span class="dot"></span>Senior Graduation Project · Computational Biology</span>
       <h1 class="title">Cont<span class="accent">VAR</span>: Contrastive Graph Representation Learning for Protein Variant Function Prediction</h1>
       <p class="subtitle">A two-module system trained through a three-stage workflow: GO-based encoder pretraining, variant contrastive specialization, and supervised GO-function decoding.</p>
 
@@ -746,7 +753,7 @@ ul.clean li::before {
           </div>
           <div>
             <div class="uni">Hacettepe University</div>
-            <div class="dept">Dept. of Computer Engineering · BIDS Lab</div>
+            <div class="dept">Dept. of Computer Engineering</div>
           </div>
         </div>
       </div>
@@ -1086,7 +1093,7 @@ ul.clean li::before {
     <div>
       <h3>Acknowledgements</h3>
       <p>We thank <strong>Prof. Dr. Tunca Doğan</strong> and the Biological Data Science Laboratory for guidance, and the Hacettepe Department of Computer Engineering for compute and infrastructure support.</p>
-      <p style="color: var(--muted); font-size: 7.6pt;">Built with PyTorch · PyTorch Geometric · Graphein · ESM-2 · Weights &amp; Biases.</p>
+      <p style="color: rgba(255, 255, 255, 0.78); font-size: 7.6pt;">Built with PyTorch · PyTorch Geometric · Graphein · ESM-2 · Weights &amp; Biases.</p>
     </div>
 
     <div class="qr-box">
