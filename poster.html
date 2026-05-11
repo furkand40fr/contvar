@@ -745,7 +745,7 @@ h1.title .accent {
   color: var(--ink);
   margin: 0 0 2px;
 }
-.sec p { margin: 5px 0; color: var(--ink-soft); font-size: 11pt; }
+.sec p { margin: 5px 0; color: var(--ink-soft); font-size: 12pt; }
 .sec p strong { color: var(--ink); }
 .sec p em { color: var(--ink); font-style: italic; }
 
@@ -760,6 +760,7 @@ ul.clean {
 ul.clean li {
   position: relative;
   padding-left: 14px;
+  font-size: 12pt;
   color: var(--ink-soft);
 }
 ul.clean li::before {
@@ -795,7 +796,7 @@ ul.clean li::before {
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
 }
 .triplet svg {
-  width: 95%;
+  width: 76%;
   height: auto;
   display: block;
   margin: 0 auto;
@@ -1135,22 +1136,48 @@ ul.clean li::before {
 .footer p { margin: 3px 0; color: rgba(255, 255, 255, 0.88); font-size: 8.6pt; line-height: 1.45; }
 
 .qr-box {
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 111px;
+  max-width: 450px;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 .qr {
+  grid-column: 2;
+  grid-row: 1;
   width: 74px; height: 74px; flex: 0 0 74px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
+  border-radius: 9px;
+  border: 3px solid rgba(255, 255, 255, 0.95);
   object-fit: contain;
   background: var(--surface);
   display: block;
+  box-shadow: var(--shadow);
+  transform: scale(1.65);
+  transform-origin: right center;
+  margin-left: 100px;
 }
-.qr-box .lbl { font-size: 7.8pt; color: var(--muted); line-height: 1.35; }
+.qr-box .lbl {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  padding: 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 8pt;
+  color: var(--muted);
+  line-height: 1.2;
+  min-height: 70px;
+  min-width: 300px;
+  margin-left: 80px;
+}
 .qr-box .lbl strong { display: block; color: var(--ink); font-size: 9pt; }
 
 .refs {
