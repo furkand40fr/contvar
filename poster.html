@@ -31,6 +31,7 @@
   --pathogenic:   #ef4444;
   --warm:         #f59e0b;
   --violet:       #7c3aed;
+  --p_blue:      #3b82f6;
 
   --shadow:       0 4px 14px rgba(15, 23, 42, 0.05),
                   0 1px 3px  rgba(15, 23, 42, 0.03);
@@ -246,17 +247,17 @@ h1.title .accent {
 
 /* ---------- Architecture figure ---------- */
 .architecture-figure {
-  min-height: 170mm;
+  min-height: 180mm;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(11,83,148,0.035), rgba(20,184,166,0.03)),
     var(--surface);
   box-shadow: var(--shadow);
-  padding: 14px 16px 16px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
 }
 .arch-top {
   display: flex;
@@ -347,30 +348,31 @@ h1.title .accent {
   font-size: 9.5pt;
 }
 .arch-h {
-  font-size: 10.2pt;
-  font-weight: 800;
+  font-size: 12pt;
+  font-weight: 600;
   color: var(--ink);
   line-height: 1.16;
 }
 .arch-kicker {
-  font-size: 7.1pt;
+  font-size: 8pt;
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  margin-top: 2px;
 }
 .arch-p {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 8.1pt;
-  line-height: 1.32;
+  font-size: 10pt;
+  line-height: 1.15;
 }
 .arch-arrow {
   display: grid;
   place-items: center;
-  color: var(--muted);
-  font-size: 16pt;
-  font-weight: 300;
+  color: var(--ink-soft);
+  font-size: 17.3pt;
+  font-weight: 800;
 }
 .asset-slot {
   min-height: 24mm;
@@ -476,8 +478,8 @@ h1.title .accent {
 .encoder-layer p {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 7.5pt;
-  line-height: 1.3;
+  font-size: 10pt;
+  line-height: 1.15;
 }
 .training-grid {
   display: grid;
@@ -516,7 +518,7 @@ h1.title .accent {
   font-weight: 800;
   font-size: 8pt;
 }
-.triplet-pill.a { background: var(--primary); }
+.triplet-pill.a { background: var(--p_blue); }
 .triplet-pill.p { background: var(--benign); }
 .triplet-pill.n { background: var(--pathogenic); }
 .encoder-figure {
@@ -705,7 +707,7 @@ h1.title .accent {
   margin-left: 2px;
 }
 .ov-p {
-  font-size: 11pt;
+  font-size: 12pt;
   color: var(--ink-soft);
   line-height: 1;
   margin-top: 2px;
@@ -731,7 +733,7 @@ h1.title .accent {
   display: flex; flex-direction: column; gap: 4px;
 }
 .sec-eyebrow {
-  font-size: 11pt;
+  font-size: 13pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.10em;
@@ -752,7 +754,7 @@ h1.title .accent {
   background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
 }
 .sec-title {
-  font-size: 14pt;
+  font-size: 14.5pt;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--ink);
@@ -919,7 +921,7 @@ ul.clean li::before {
   border-radius: 999px;
   background: rgba(11,83,148,0.08);
   color: var(--primary);
-  font-size: 7.4pt;
+  font-size: 10pt;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -927,8 +929,8 @@ ul.clean li::before {
 }
 .stage .tag.t-go { background: rgba(124,58,237,0.10); color: var(--violet); }
 .stage .tag.t-dms { background: rgba(20,184,166,0.10); color: var(--accent-2); }
-.stage h4 { margin: 0 0 3px; font-size: 9.5pt; }
-.stage p  { margin: 2px 0; font-size: 8.6pt; color: var(--ink-soft); line-height: 1.4; }
+.stage h4 { margin: 0 0 3px; font-size: 12pt; }
+.stage p  { margin-top:5px; margin: 2px 0; font-size: 10.5pt; color: var(--ink-soft); line-height: 1.4; }
 
 /* ---------- Math blocks ---------- */
 .eq {
@@ -938,7 +940,7 @@ ul.clean li::before {
   border-left: 3px solid var(--accent);
   border-radius: 6px;
   font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  font-size: 9pt;
+  font-size: 12pt;
   color: var(--ink);
   overflow-x: auto;
   line-height: 1.5;
@@ -946,12 +948,12 @@ ul.clean li::before {
 .eq .name {
   display: block;
   font-family: "Inter", sans-serif;
-  font-size: 7.4pt;
+  font-size: 10pt;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 3px;
+  letter-spacing: 0.01em;
+  margin-bottom: 5px;
 }
 
 /* ---------- Edge feature breakdown ---------- */
@@ -983,8 +985,9 @@ ul.clean li::before {
 .big-numbers {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin: 10px 0 8px;
+  gap: 6px;
+  margin: 2px 0 8px;
+  max-height: 50px;
 }
 .big-number {
   border: 1px solid var(--line);
@@ -998,7 +1001,7 @@ ul.clean li::before {
 .big-number .num {
   display: block;
   color: var(--primary);
-  font-size: 16pt;
+  font-size: 14pt;
   line-height: 1;
   font-weight: 800;
 }
@@ -1006,7 +1009,7 @@ ul.clean li::before {
   display: block;
   margin-top: 4px;
   color: var(--ink-soft);
-  font-size: 7.5pt;
+  font-size: 8pt;
   line-height: 1.2;
   font-weight: 600;
 }
@@ -1039,15 +1042,15 @@ ul.clean li::before {
   border-radius: 9px;
   padding: 10px 12px;
 }
-.metric .name { font-size: 7.6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); }
-.metric .desc { font-size: 8.2pt; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+.metric .name { font-size: 10.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); }
+.metric .desc { font-size: 12pt; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
 
 /* ---------- Result table ---------- */
 .results-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 6px;
-  font-size: 8.6pt;
+  font-size: 12pt;
 }
 .results-table th, .results-table td {
   padding: 8px 10px;
@@ -1118,9 +1121,9 @@ ul.clean li::before {
   align-self: center;
   display: grid;
   place-items: center;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-size: 14pt;
-  font-weight: 300;
+  font-weight: 700;
 }
 
 /* ---------- Footer ---------- */
@@ -1128,7 +1131,7 @@ ul.clean li::before {
   display: grid;
   grid-template-columns: 1.45fr 1fr 0.85fr;
   gap: 10mm;
-  padding: 7mm;
+  padding: 6mm;
   border-top: 0;
   border-radius: var(--radius);
   background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
@@ -1140,13 +1143,13 @@ ul.clean li::before {
 }
 .footer h3 {
   margin: 0 0 5px;
-  font-size: 9.4pt;
+  font-size: 10pt;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: white;
   font-weight: 700;
 }
-.footer p { margin: 3px 0; color: rgba(255, 255, 255, 0.88); font-size: 8.6pt; line-height: 1.45; }
+.footer p { margin: 3px 0; color: rgba(255, 255, 255, 0.88); font-size: 9pt; line-height: 1.45; }
 
 .qr-box {
   display: grid;
@@ -1221,14 +1224,14 @@ ul.clean li::before {
   <header class="header">
     <div>
       <h1 class="title">Cont<span class="accent">VAR</span>: Contrastive Graph Representation Learning for Protein Variant Function Prediction</h1>
-      <p class="subtitle">A two-module system trained through a three-stage workflow: GO-based encoder pretraining, variant contrastive specialization, and supervised GO-function decoding.</p>
+      <p class="subtitle">ContVar predicts how single amino-acid variants change protein function by comparing wild-type and mutant proteins. It moves beyond a generic "damaging vs. neutral" to identify which functions are retained, gained, or lost.</p>
 
       <div class="authors">
         <span class="author">Furkan Dursun</span>
         <span class="author">Enes Karaarslan</span>
         <span class="author">Boran Çakıl</span>
         <span class="author"> Caner Ayvaz</span>
-        <span class="advisor">Advisor · Prof. Dr. Tunca Doğan</span>
+        <span class="advisor">Advisors · Prof. Dr. Tunca Doğan, Erva Ulusoy, Bünyamin Şen</span>
       </div>
       <div class="affiliation">
         Biological Data Science Laboratory · Department of Computer Engineering · Hacettepe University · 06800 Ankara, Türkiye
@@ -1271,7 +1274,7 @@ ul.clean li::before {
       <span class="ov-num">B</span>
       <div class="ov-body">
         <span class="ov-h">Featurization & Graph Construction</span>
-        <span class="ov-p">SALAD edges · ESM-2 ⊕ AA one-hot nodes</span>
+        <span class="ov-p">Hybrid residue graph · ESM-2 and AA one-hot nodes</span>
       </div>
     </div>
     <div class="ov-arrow">→</div>
@@ -1322,8 +1325,8 @@ ul.clean li::before {
         <div class="arch-stage">
           <span class="arch-num">2</span>
           <div>
-            <div class="arch-h">Residue graph</div>
-            <div class="arch-kicker">SALAD-style topology</div>
+            <div class="arch-h">Graph Construction</div>
+            <div class="arch-kicker">Sequence-spatial topology</div>
           </div>
         </div>
         <div class="asset-slot figure-slot" aria-label="Residue graph with index, spatial, and random edges">
@@ -1342,8 +1345,8 @@ ul.clean li::before {
         <div class="arch-stage">
           <span class="arch-num">3</span>
           <div>
-            <div class="arch-h">Shared ContVAR encoder</div>
-            <div class="arch-kicker">Function-aware graph representation</div>
+            <div class="arch-h">ContVAR encoder</div>
+            <div class="arch-kicker">Self-supervised contrastive graph encoder</div>
           </div>
         </div>
         <div class="encoder-stack">
@@ -1444,14 +1447,14 @@ ul.clean li::before {
           Single amino-acid variants (SAVs) drive disease mechanisms, oncogenic transformations, and drug response, but experimental characterization is slow — most variants remain annotated only as <em>variants of uncertain significance</em>.
         </p>
         <p>
-          Existing variant-effect predictors (SIFT, PolyPhen-2, CADD, ESM-1v) compress mutation impact into a <strong>scalar deleteriousness</strong> score, while GO-annotation models (DeepGOPlus, DeepFRI, DeepGraphGO) operate on <strong>wild-type</strong> proteins. Neither side answers the clinically and biotechnologically critical question: <strong>which specific molecular function is gained or lost</strong> due to a SAV?
+          Existing variant-effect predictors (AlphaMissense, SIFT, PolyPhen-2, CADD) compress mutation impact into a <strong>scalar deleteriousness</strong> score, while GO-annotation models (DeepGOPlus, DeepFRI, DeepGraphGO) operate on <strong>wild-type</strong> proteins. Neither side answers the clinically and biotechnologically critical question: <strong>which specific molecular function is gained or lost</strong> due to a SAV?
         </p>
         <p>
           <strong>ContVAR</strong> targets this gap with <strong>two learned modules trained through a three-stage workflow</strong>:
         </p>
         <ul class="clean">
           <li><strong>Encoder</strong> — graph contrastive model warm-started with GO pretraining, then specialized on variant triplets.</li>
-          <li><strong>Decoder</strong> — ontology-specific 256→512→1024→512 feed-forward multi-label GO classifiers; variant effect is read off by comparing variant GO probabilities with the WT annotation baseline.</li>
+          <li><strong>Decoder</strong> — ontology-specific feed-forward multi-label GO classifiers; variant effect is read off by comparing variant GO probabilities with the WT annotation baseline.</li>
         </ul>
 
       </section>
@@ -1460,7 +1463,7 @@ ul.clean li::before {
         <span class="sec-eyebrow">Data &amp; Featurization</span>
         <h2 class="sec-title">Two complementary supervision tracks</h2>
         <p>
-          <strong>Phase 0 — GO.</strong> Salad style graphs from Swiss-Prot proteins are paired using semantic-similarity scoring over GO annotations (Molecular Function, Biological Process, Cellular Component). Proteins with similarity &gt; 0.8 are positives; proteins with similarity &lt; 0.2 are negatives.
+          <strong>Phase 0 — GO.</strong> Swiss-Prot proteins are represented as hybrid residue graphs that combine sequential adjacency, Cα-distance spatial contacts, and sampled long-range residue links. Graph pairs are then formed using semantic-similarity scoring over GO annotations (Molecular Function, Biological Process, Cellular Component). Proteins with similarity &gt; 0.8 are positives; proteins with similarity &lt; 0.2 are negatives.
         </p>
         <p>
           <strong>Phase 1 — DMS.</strong> After filtering by protein length and class availability, the variant dataset contains 97 wild-type proteins. For each protein we select 50 positive and 50 negative variants, giving a balanced 9,700-variant training/evaluation pool.
@@ -1486,9 +1489,10 @@ ul.clean li::before {
 
       <section class="sec">
         <span class="sec-eyebrow">Graph construction</span>
-        <h2 class="sec-title">SALAD-style hybrid topology</h2>
+        <h2 class="sec-title">Hybrid residue graph topology</h2>
         <p>
-          Each residue receives a sparse mix of sequence, spatial, and random long-range neighbors. This keeps the graph efficient while preserving local packing and non-local structural signals.
+          Nodes represent residues, combining amino-acid one-hot features with residue-level ESM-2 embeddings.<br>
+          Each residue receives a sparse mix of sequence, spatial, and random long-range neighbors. This keeps the graph efficient while preserving local packing and non-local structural signals. This graph construction is inspired by a work called SALAD.
         </p>
         <ul class="clean">
           <li><strong>Index neighbors</strong> — nearby residues in sequence.</li>
@@ -1513,8 +1517,8 @@ ul.clean li::before {
           </div>
         </div>
         <div class="eq">
-          <span class="name">Global triplet loss with mined negatives</span>
-          &Lscr;<sub class="sub">g</sub> = max( 0,&nbsp; d(z<sub class="sub">a</sub><sup class="sup">g</sup>, z<sub class="sub">p</sub><sup class="sup">g</sup>) &minus; d(z<sub class="sub">a</sub><sup class="sup">g</sup>, z<sub class="sub">n</sub><sup class="sup">g</sup>) + m )
+          <span class="name">Triplet Loss</span>
+          &Lscr;<sub class="sub">g</sub> = max( 0,&nbsp; d(a, p) &minus; d(a, n) + m )
         </div>
         <div class="triplet" aria-label="Triplet contrastive training moves positive variants closer to the anchor and negative variants farther away">
         <svg viewBox="0 0 720 235" role="img">
@@ -1634,18 +1638,6 @@ ul.clean li::before {
             <div class="name">Uniformity</div>
             <div class="desc">log 𝔼 e<sup class="sup">−2‖z<sub class="sub">i</sub>−z<sub class="sub">j</sub>‖²</sup> — spread on the hypersphere.</div>
           </div>
-          <div class="metric">
-            <div class="name">Dist. margin</div>
-            <div class="desc">𝔼[d(a,n)] − 𝔼[d(a,p)] at both global &amp; local granularity.</div>
-          </div>
-          <div class="metric">
-            <div class="name">Mining ratio</div>
-            <div class="desc">Share of evaluated negatives in the hard / semi-hard band per epoch.</div>
-          </div>
-          <div class="metric">
-            <div class="name">Embedding stats</div>
-            <div class="desc">Cosine similarity between anchor and positive / negative embeddings, plus per-dimension embedding standard deviation.</div>
-          </div>
         </div>
         <p>
           Validation and test use <strong>exhaustive positive×negative combinations</strong> per family. The best checkpoint (lowest val. total loss) is re-evaluated on val + test.
@@ -1708,7 +1700,7 @@ ul.clean li::before {
 
     <div>
       <h3>Acknowledgements</h3>
-      <p>We thank <strong>Prof. Dr. Tunca Doğan</strong> and the Biological Data Science Laboratory for guidance, compute and infrastructure support.</p>
+      <p>We thank <strong>Prof. Dr. Tunca Doğan, Erva Ulusoy, Bünyamin Şen</strong> and the Biological Data Science Laboratory for guidance, compute and infrastructure support.</p>
       <p style="color: rgba(255, 255, 255, 0.78); font-size: 7.6pt;">Built with PyTorch · PyTorch Geometric · AlphaFold · Graphein · ESM-2 · Weights &amp; Biases.</p>
     </div>
 
