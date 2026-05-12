@@ -246,7 +246,7 @@ h1.title .accent {
 
 /* ---------- Architecture figure ---------- */
 .architecture-figure {
-  min-height: 150mm;
+  min-height: 170mm;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
@@ -519,11 +519,24 @@ h1.title .accent {
 .triplet-pill.a { background: var(--primary); }
 .triplet-pill.p { background: var(--benign); }
 .triplet-pill.n { background: var(--pathogenic); }
+.encoder-figure {
+  display: grid;
+  place-items: center;
+  margin: 1px 0 2px;
+}
+.encoder-image {
+  width: 100%;
+  height: 58mm;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
 .embedding-bar {
   display: grid;
   grid-template-columns: 0.95fr 1.15fr;
   gap: 6px;
   align-items: center;
+  margin-top: auto;
   padding: 6px 7px;
   border: 1px solid rgba(11,83,148,0.16);
   border-radius: 8px;
@@ -796,7 +809,7 @@ ul.clean li::before {
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
 }
 .triplet svg {
-  width: 76%;
+  width: 61%;
   height: auto;
   display: block;
   margin: 0 auto;
@@ -1274,7 +1287,7 @@ ul.clean li::before {
       <span class="ov-num">D</span>
       <div class="ov-body">
         <span class="ov-h">GO decoder &nbsp;<small>supervised</small></span>
-        <span class="ov-p">MF · BP · CC heads &nbsp;·&nbsp; sigmoid per-term &nbsp;·&nbsp; Δ vs. wild-type</span>
+        <span class="ov-p">MF · BP · CC FFN decoders &nbsp;·&nbsp; WT vs variant delta score</span>
       </div>
     </div>
   </section>
@@ -1284,7 +1297,7 @@ ul.clean li::before {
     <div class="arch-top">
       <div>
         <h2 class="arch-title">ContVAR Architecture</h2>
-        <div class="arch-subtitle">A graph encoder learns function-aware protein and variant embeddings; a supervised decoder translates embedding changes into per-GO-term gain / loss scores.</div>
+        <div class="arch-subtitle">A graph encoder learns function-aware protein and variant embeddings; supervised ontology-specific FFN decoders translate variant embeddings into per-GO-term gain / loss scores.</div>
       </div>
     </div>
 
@@ -1352,11 +1365,14 @@ ul.clean li::before {
             <div class="branch-title">Phase 1</div>
             <p class="arch-p">DMS triplets specialize variants with global + local contrastive loss.</p>
             <div class="triplet-mini" aria-hidden="true">
-              <span class="triplet-pill a">A</span>
-              <span class="triplet-pill p">P</span>
+              <span class="triplet-pill p">A</span>
+              <span class="triplet-pill a">P</span>
               <span class="triplet-pill n">N</span>
             </div>
           </div>
+        </div>
+        <div class="encoder-figure" aria-label="Shared ContVAR encoder architecture figure">
+          <img class="encoder-image" src="encoder.png" alt="Shared ContVAR encoder architecture" />
         </div>
         <div class="embedding-bar">
           <div>
@@ -1376,11 +1392,11 @@ ul.clean li::before {
         <div class="arch-stage">
           <span class="arch-num">4</span>
           <div>
-            <div class="arch-h">GO decoder</div>
-            <div class="arch-kicker">Supervised multi-label heads</div>
+            <div class="arch-h">GO FFN decoder</div>
+            <div class="arch-kicker">Supervised ontology-specific MLP heads</div>
           </div>
         </div>
-        <p class="arch-p">Decoder trains on native Swiss-Prot annotations, then scores WT and variant embeddings at inference time.</p>
+        <p class="arch-p">Each MF / BP / CC decoder is a 256→512→1024→512→GO feed-forward network. It trains on native Swiss-Prot annotations, then scores variant embeddings against the WT GO-annotation baseline at inference time.</p>
         <div class="decoder-figure" aria-label="GO decoder architecture figure">
           <img class="decoder-image" src="decoder.png" alt="Decoder network architecture" />
         </div>
@@ -1390,9 +1406,9 @@ ul.clean li::before {
           <div class="go-head"><strong>CC</strong><span>cellular</span></div>
         </div>
         <div class="head-list">
+          <div class="head-item"><span>BCEWithLogits training</span><strong>multi-label</strong></div>
           <div class="head-item"><span>Sigmoid per GO term</span><strong>p in [0,1]</strong></div>
-          <div class="head-item"><span>Zero-function unit</span><strong>LOF</strong></div>
-          <div class="head-item"><span>AUPRC threshold sweep</span><strong>calibrated</strong></div>
+          <div class="head-item"><span>NULL_FUNCTION unit</span><strong>LOF</strong></div>
         </div>
       </div>
 
@@ -1403,10 +1419,10 @@ ul.clean li::before {
           <span class="arch-num">5</span>
           <div>
             <div class="arch-h">Functional readout</div>
-            <div class="arch-kicker">WT - variant Delta score</div>
+            <div class="arch-kicker">Variant score vs. WT GO baseline</div>
           </div>
         </div>
-        <p class="arch-p">The Hugging Face Space compares wild-type and variant predictions, then reports gained and lost GO terms ranked by Delta score.</p>
+        <p class="arch-p">The Hugging Face Space combines known WT GO labels with variant decoder probabilities, then reports retained, gained, and lost GO terms.</p>
         <div class="readout-stack" aria-label="Functional readout gained and lost GO terms">
           <img class="readout-image" src="gained.png" alt="Gained GO function readout" />
           <img class="readout-image" src="lost.png" alt="Lost GO function readout" />
@@ -1435,90 +1451,34 @@ ul.clean li::before {
         </p>
         <ul class="clean">
           <li><strong>Encoder</strong> — graph contrastive model warm-started with GO pretraining, then specialized on variant triplets.</li>
-          <li><strong>Decoder</strong> — supervised multi-label GO classifier on top of those embeddings; variant effect is read off as <span class="mono">Δscore = score(WT) − score(variant)</span> per GO term.</li>
+          <li><strong>Decoder</strong> — ontology-specific 256→512→1024→512 feed-forward multi-label GO classifiers; variant effect is read off by comparing variant GO probabilities with the WT annotation baseline.</li>
         </ul>
 
-        <div class="triplet" aria-label="Triplet contrastive training moves positive variants closer to the anchor and negative variants farther away">
-          <svg viewBox="0 0 720 235" role="img">
-            <defs>
-              <linearGradient id="triplet-training-gradient" x1="335" y1="117" x2="449" y2="117" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stop-color="#0b5394" stop-opacity="0.78" />
-                <stop offset="1" stop-color="#10b981" stop-opacity="0.82" />
-              </linearGradient>
-              <marker id="triplet-arrow-green" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse">
-                <path d="M0,0 L10,5 L0,10 Z" fill="#10b981" />
-              </marker>
-              <marker id="triplet-arrow-red" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse">
-                <path d="M0,0 L10,5 L0,10 Z" fill="#b94a48" />
-              </marker>
-            </defs>
-
-            <text class="triplet-title" x="170" y="16" text-anchor="middle">Before training</text>
-            <text class="triplet-title" x="550" y="16" text-anchor="middle">After training</text>
-
-            <g aria-label="Before training embedding space">
-              <circle class="boundary-neg" cx="170" cy="116" r="86" />
-              <circle class="boundary-pos" cx="170" cy="116" r="48" />
-              <line class="vec-pos" x1="170" y1="116" x2="249" y2="59" marker-end="url(#triplet-arrow-green)" />
-              <line class="vec-neg" x1="170" y1="116" x2="240" y2="151" marker-end="url(#triplet-arrow-red)" />
-              <circle class="node-dot" cx="170" cy="116" r="16" fill="#2563a8" />
-              <circle class="node-dot" cx="266" cy="46" r="16" fill="#10b981" />
-              <circle class="node-dot" cx="257" cy="160" r="16" fill="#b94a48" />
-              <text class="node-label" x="170" y="116">a</text>
-              <text class="node-label" x="266" y="46">p</text>
-              <text class="node-label" x="257" y="160">n</text>
-              <text class="triplet-note" x="170" y="220" text-anchor="middle">positive outside margin; negative too close</text>
-            </g>
-
-            <g aria-label="Training arrow">
-              <path class="training-arrow" d="M330 105 Q326 105 326 109 V125 Q326 129 330 129 H400 Q404 129 404 133 V138 Q404 143 408 140 L437 120 Q441 117 437 114 L408 94 Q404 91 404 96 V101 Q404 105 400 105 Z" />
-              <text class="training-label" x="372" y="118">TRAIN</text>
-            </g>
-
-            <g aria-label="After training embedding space">
-              <circle class="boundary-neg" cx="550" cy="116" r="86" />
-              <circle class="boundary-pos" cx="550" cy="116" r="48" />
-              <line class="vec-pos" x1="550" y1="116" x2="579" y2="78" marker-end="url(#triplet-arrow-green)" />
-              <line class="vec-neg" x1="550" y1="116" x2="614" y2="178" marker-end="url(#triplet-arrow-red)" />
-              <circle class="node-dot" cx="550" cy="116" r="16" fill="#2563a8" />
-              <circle class="node-dot" cx="588" cy="66" r="16" fill="#10b981" />
-              <circle class="node-dot" cx="626" cy="190" r="16" fill="#b94a48" />
-              <text class="node-label" x="550" y="116">a</text>
-              <text class="node-label" x="588" y="66">p</text>
-              <text class="node-label" x="626" y="190">n</text>
-              <text class="triplet-note" x="550" y="220" text-anchor="middle">positive pulled in; negative pushed out</text>
-            </g>
-          </svg>
-        </div>
       </section>
 
       <section class="sec">
         <span class="sec-eyebrow">Data &amp; Featurization</span>
         <h2 class="sec-title">Two complementary supervision tracks</h2>
         <p>
-          <strong>Phase 0 — GO.</strong> Pre-built PyG <span class="mono">.pt</span> graphs from Swiss-Prot are paired with three semantic-similarity TSVs (Molecular Function, Biological Process, Cellular Component). Positives use similarity ≥ 0.8; negatives use ≤ 0.2 (sampled from low/mid bins for hardness). Triplets whose proteins are missing in the prebuilt graph index are dropped.
+          <strong>Phase 0 — GO.</strong> Salad style graphs from Swiss-Prot proteins are paired using semantic-similarity scoring over GO annotations (Molecular Function, Biological Process, Cellular Component). Proteins with similarity &gt; 0.8 are positives; proteins with similarity &lt; 0.2 are negatives.
+        </p>
+        <p>
+          <strong>Phase 1 — DMS.</strong> After filtering by protein length and class availability, the variant dataset contains 97 wild-type proteins. For each protein we select 50 positive and 50 negative variants, giving a balanced 9,700-variant training/evaluation pool.
         </p>
         <div class="big-numbers" aria-label="Filtered balanced variant dataset">
           <div class="big-number">
+            <span class="num">122,190</span>
+            <span class="label">Phase 0 proteins</span>
+          </div>
+          <div class="big-number">
             <span class="num">97</span>
-            <span class="label">wild-type proteins</span>
-          </div>
-          <div class="big-number">
-            <span class="num">50</span>
-            <span class="label">positive variants / protein</span>
-          </div>
-          <div class="big-number">
-            <span class="num">50</span>
-            <span class="label">negative variants / protein</span>
+            <span class="label">Phase 1 wild-type proteins</span>
           </div>
           <div class="big-number">
             <span class="num">9,700</span>
             <span class="label">balanced variants</span>
           </div>
         </div>
-        <p>
-          <strong>Phase 1 / 2 — DMS.</strong> After filtering by protein length and class availability, the variant dataset contains 97 wild-type proteins. For each protein we select 50 positive and 50 negative variants, giving a balanced 9,700-variant training/evaluation pool. The family split is <strong>93 / 2 / 2</strong> to reduce leakage.
-        </p>
         <p>
           <strong>Node features.</strong> Each residue combines amino-acid one-hot features with ESM-2 embeddings. Mutation positions are parsed from variant filenames during collation and mining.
         </p>
@@ -1548,9 +1508,65 @@ ul.clean li::before {
           </div>
           <div class="stage">
             <span class="tag t-dms">Heads</span>
-            <h4>Global · Local · GO</h4>
-            <p><em>Global:</em> mean-pool → MLP → 256-D. <em>Local:</em> node features at the mutated residue → MLP → 256-D. <em>Phase 0:</em> separate MF / BP / CC heads on top of the global embedding.</p>
+            <h4>GO · Global · Local</h4>
+            <p><em>Phase 0:</em> separate MF / BP / CC heads on top of the global embedding.<br><em>Global:</em> mean-pool → MLP → 256-D.<br><em>Local:</em> node features at the mutated residue → MLP → 256-D.</p>
           </div>
+        </div>
+        <div class="eq">
+          <span class="name">Global triplet loss with mined negatives</span>
+          &Lscr;<sub class="sub">g</sub> = max( 0,&nbsp; d(z<sub class="sub">a</sub><sup class="sup">g</sup>, z<sub class="sub">p</sub><sup class="sup">g</sup>) &minus; d(z<sub class="sub">a</sub><sup class="sup">g</sup>, z<sub class="sub">n</sub><sup class="sup">g</sup>) + m )
+        </div>
+        <div class="triplet" aria-label="Triplet contrastive training moves positive variants closer to the anchor and negative variants farther away">
+        <svg viewBox="0 0 720 235" role="img">
+          <defs>
+            <linearGradient id="triplet-training-gradient" x1="335" y1="117" x2="449" y2="117" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#0b5394" stop-opacity="0.78" />
+              <stop offset="1" stop-color="#10b981" stop-opacity="0.82" />
+            </linearGradient>
+            <marker id="triplet-arrow-green" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#10b981" />
+            </marker>
+            <marker id="triplet-arrow-red" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#b94a48" />
+            </marker>
+          </defs>
+
+          <text class="triplet-title" x="170" y="16" text-anchor="middle">Before training</text>
+          <text class="triplet-title" x="550" y="16" text-anchor="middle">After training</text>
+
+          <g aria-label="Before training embedding space">
+            <circle class="boundary-neg" cx="170" cy="116" r="86" />
+            <circle class="boundary-pos" cx="170" cy="116" r="48" />
+            <line class="vec-pos" x1="170" y1="116" x2="249" y2="59" marker-end="url(#triplet-arrow-green)" />
+            <line class="vec-neg" x1="170" y1="116" x2="240" y2="151" marker-end="url(#triplet-arrow-red)" />
+            <circle class="node-dot" cx="170" cy="116" r="16" fill="#2563a8" />
+            <circle class="node-dot" cx="266" cy="46" r="16" fill="#10b981" />
+            <circle class="node-dot" cx="257" cy="160" r="16" fill="#b94a48" />
+            <text class="node-label" x="170" y="116">a</text>
+            <text class="node-label" x="266" y="46">p</text>
+            <text class="node-label" x="257" y="160">n</text>
+            <text class="triplet-note" x="170" y="220" text-anchor="middle">positive outside margin; negative too close</text>
+          </g>
+
+          <g aria-label="Training arrow">
+            <path class="training-arrow" d="M330 105 Q326 105 326 109 V125 Q326 129 330 129 H400 Q404 129 404 133 V138 Q404 143 408 140 L437 120 Q441 117 437 114 L408 94 Q404 91 404 96 V101 Q404 105 400 105 Z" />
+            <text class="training-label" x="372" y="118">TRAIN</text>
+          </g>
+
+          <g aria-label="After training embedding space">
+            <circle class="boundary-neg" cx="550" cy="116" r="86" />
+            <circle class="boundary-pos" cx="550" cy="116" r="48" />
+            <line class="vec-pos" x1="550" y1="116" x2="579" y2="78" marker-end="url(#triplet-arrow-green)" />
+            <line class="vec-neg" x1="550" y1="116" x2="614" y2="178" marker-end="url(#triplet-arrow-red)" />
+            <circle class="node-dot" cx="550" cy="116" r="16" fill="#2563a8" />
+            <circle class="node-dot" cx="588" cy="66" r="16" fill="#10b981" />
+            <circle class="node-dot" cx="626" cy="190" r="16" fill="#b94a48" />
+            <text class="node-label" x="550" y="116">a</text>
+            <text class="node-label" x="588" y="66">p</text>
+            <text class="node-label" x="626" y="190">n</text>
+            <text class="triplet-note" x="550" y="220" text-anchor="middle">positive pulled in; negative pushed out</text>
+          </g>
+        </svg>
         </div>
       </section>
 
@@ -1558,9 +1574,11 @@ ul.clean li::before {
         <span class="sec-eyebrow">Phase 0 — GO pretraining</span>
         <h2 class="sec-title">Function-aware initialization</h2>
         <p>
-          GO pretraining is part of encoder training, not a separate runtime module. Three ontology-specific heads share the encoder backbone and learn semantic relationships across Molecular Function, Biological Process, and Cellular Component. The best phase-0 checkpoint warm-starts variant specialization.
+          GO pretraining is part of encoder training. Semantic similarity measures how close two proteins are in GO annotation space. Proteins sharing similar GO terms receive high scores, while unrelated proteins receive low scores. Then, we teach the encoder to place proteins with similar functionalities near each other before variant specialization. The best Phase 0 checkpoint warm-starts Phase 1.
         </p>
       </section>
+
+
 
     </div>
 
@@ -1568,42 +1586,35 @@ ul.clean li::before {
     <div class="col">
 
       <section class="sec">
-        <span class="sec-eyebrow">Phase 1 / 2 — DMS specialization</span>
+        <span class="sec-eyebrow">Phase 1 — DMS specialization</span>
         <h2 class="sec-title">Joint global + local contrastive loss</h2>
         <p>
-          <strong>Streaming semi-hard mining.</strong> For every anchor we evaluate candidate negatives in fixed-size GPU chunks, then keep hard / semi-hard variants that produce stronger training signal.
-        </p>
-        <div class="eq">
-          <span class="name">Global triplet loss with mined n*</span>
-          ℒ<sub class="sub">g</sub> = max( 0,&nbsp; d(z<sub class="sub">a</sub><sup class="sup">g</sup>, z<sub class="sub">p</sub><sup class="sup">g</sup>) − d(z<sub class="sub">a</sub><sup class="sup">g</sup>, z<sub class="sub">n*</sub><sup class="sup">g</sup>) + m )
-        </div>
-        <p>
-          <strong>Local mutation-site learning.</strong> The model also compares residue-level embeddings at the mutation position, so the representation captures both whole-protein and local structural effects.
+          Phase 1 specializes the pretrained encoder on DMS variant triplets, pulling functionally similar variants closer to the wild-type anchor and pushing damaging variants away. The loss combines whole-protein and mutation-site signals, with mined negatives used to focus training on informative comparisons.
         </p>
       </section>
-
+      
       <section class="sec">
-        <span class="sec-eyebrow">Decoder · variant scoring</span>
-        <h2 class="sec-title">Multi-label GO classifier &amp; Δscore readout</h2>
+        <span class="sec-eyebrow">Decoder</span>
+        <h2 class="sec-title">Multi-label GO classifier &amp; retention readout</h2>
         <p>
-          The encoder output is fed into a <strong>supervised feed-forward decoder</strong> that produces, for every relevant GO term, a sigmoid probability <span class="mono">σ(·) ∈ [0, 1]</span>. A dedicated <strong>"zero-function"</strong> output unit captures variants with complete loss of function.
+          The 256-D encoder output is fed into a <strong>supervised feed-forward decoder</strong> with hidden layers <span class="mono">512 → 1024 → 512</span>, BatchNorm, ReLU, and Dropout. It returns GO logits during training and sigmoid probabilities <span class="mono">σ(·) ∈ [0, 1]</span> during inference. A dedicated <strong>NULL_FUNCTION</strong> output unit captures complete loss of function.
         </p>
 
         <div class="pipeline cols-2">
           <div class="stage">
             <span class="tag t-go">Training</span>
             <h4>Native proteins only</h4>
-            <p>Three independent decoders for <strong>MF / BP / CC</strong>, each trained on Swiss-Prot manually-curated GO annotations. Variant proteins are <em>never</em> seen during training — kept exclusively for inference.</p>
+            <p>Three independent FFN decoders for <strong>MF / BP / CC</strong>, each trained on Swiss-Prot manually-curated GO annotations. Variant proteins are <em>never</em> seen during training — kept exclusively for inference.</p>
           </div>
           <div class="stage">
             <span class="tag t-dms">Splits &amp; loss</span>
             <h4>UniRef50 &amp; BCE</h4>
-            <p>Train / val / test splits cluster proteins at <strong>UniRef50</strong> identity to prevent leakage with the encoder's DMS split. Loss: per-term binary cross-entropy.</p>
+            <p>Train / val / test splits cluster proteins at <strong>UniRef50</strong> identity to prevent leakage with the encoder's DMS split. Loss: weighted <span class="mono">BCEWithLogitsLoss</span> with rare-term and NULL_FUNCTION weighting.</p>
           </div>
         </div>
 
         <p style="margin-top:4px">
-          Sweeping a per-term decision threshold gives an <strong>AUPRC-optimal</strong> operating point. Reporting metrics: <span class="mono">Acc · P · R · F1 · MCC · AUROC · AUPRC</span>. The full pipeline ships as a <strong>CLI tool</strong> and a <strong>Hugging Face Space</strong> with two paths: <em>(i)</em> structure → predicted GO functions, <em>(ii)</em> WT vs. variant comparison with ClinVar lookup.
+          Decoder evaluation reports <strong>mAP</strong> from ranked probabilities and thresholded metrics at <span class="mono">p &gt; 0.95</span>: <span class="mono">Acc, P, R, F1, MCC, AUROC, AUPRC. </span> The full pipeline ships as a <strong>CLI tool</strong> and a <strong>Hugging Face Space</strong> with two paths: <em>(i)</em> structure → predicted GO functions, <em>(ii)</em> WT vs. variant comparison with ClinVar lookup.
         </p>
       </section>
 
@@ -1633,7 +1644,7 @@ ul.clean li::before {
           </div>
           <div class="metric">
             <div class="name">Embedding stats</div>
-            <div class="desc">Cosine sim. anchor↔pos / neg, plus per-dim. embedding std.</div>
+            <div class="desc">Cosine similarity between anchor and positive / negative embeddings, plus per-dimension embedding standard deviation.</div>
           </div>
         </div>
         <p>
@@ -1697,8 +1708,8 @@ ul.clean li::before {
 
     <div>
       <h3>Acknowledgements</h3>
-      <p>We thank <strong>Prof. Dr. Tunca Doğan</strong> and the Biological Data Science Laboratory for guidance, and the Hacettepe Department of Computer Engineering for compute and infrastructure support.</p>
-      <p style="color: rgba(255, 255, 255, 0.78); font-size: 7.6pt;">Built with PyTorch · PyTorch Geometric · Graphein · ESM-2 · Weights &amp; Biases.</p>
+      <p>We thank <strong>Prof. Dr. Tunca Doğan</strong> and the Biological Data Science Laboratory for guidance, compute and infrastructure support.</p>
+      <p style="color: rgba(255, 255, 255, 0.78); font-size: 7.6pt;">Built with PyTorch · PyTorch Geometric · AlphaFold · Graphein · ESM-2 · Weights &amp; Biases.</p>
     </div>
 
     <div class="qr-box">
