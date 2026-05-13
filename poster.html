@@ -247,7 +247,7 @@ h1.title .accent {
 
 /* ---------- Architecture figure ---------- */
 .architecture-figure {
-  min-height: 180mm;
+  min-height: 220mm;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
@@ -275,8 +275,9 @@ h1.title .accent {
 .arch-subtitle {
   margin-top: 3px;
   color: var(--ink-soft);
-  font-size: 9.4pt;
-  line-height: 1.35;
+  font-size: 10pt;
+  line-height: 1.15;
+  margin-bottom: 0px;
 }
 .arch-legend {
   display: flex;
@@ -303,8 +304,8 @@ h1.title .accent {
 .arch-flow {
   flex: 1;
   display: grid;
-  grid-template-columns: 1.05fr 22px 1fr 22px 1.26fr 22px 1fr 22px 1.12fr;
-  min-height: 140mm;
+  grid-template-columns: 0.9fr 22px 0.9fr 22px 1.26fr 22px 1fr 22px 1.37fr;
+  min-height: 175mm;
   gap: 8px;
   align-items: stretch;
 }
@@ -398,7 +399,7 @@ h1.title .accent {
 }
 .arch-image {
   width: 100%;
-  height: 70mm;
+  height: 80mm;
   object-fit: contain;
   object-position: center;
   display: block;
@@ -417,6 +418,9 @@ h1.title .accent {
   gap: 4px;
   margin-top: auto;
 }
+.feature-list {
+  margin-top: 0;
+}
 .feature-item,
 .head-item,
 .output-item {
@@ -429,7 +433,7 @@ h1.title .accent {
   background: var(--surface-2);
   padding: 5px 6px;
   color: var(--ink-soft);
-  font-size: 7.6pt;
+  font-size: 9pt;
   line-height: 1.2;
 }
 .feature-item strong,
@@ -515,7 +519,7 @@ h1.title .accent {
   height: 22px;
   border-radius: 999px;
   color: white;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 8pt;
 }
 .triplet-pill.a { background: var(--p_blue); }
@@ -527,8 +531,9 @@ h1.title .accent {
   margin: 1px 0 2px;
 }
 .encoder-image {
+  margin-top: 15px;
   width: 100%;
-  height: 58mm;
+  height: 90mm;
   object-fit: contain;
   object-position: center;
   display: block;
@@ -568,7 +573,7 @@ h1.title .accent {
 }
 .decoder-image {
   width: 100%;
-  height: 70mm;
+  height: 100mm;
   object-fit: contain;
   object-position: center;
   display: block;
@@ -596,20 +601,32 @@ h1.title .accent {
   letter-spacing: 0.05em;
 }
 .readout-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  gap: 4px;
   margin-top: 2px;
+  align-content: start;
 }
-.readout-image {
+.readout-shot {
   width: 100%;
-  height: 50mm;
   object-fit: contain;
   object-position: center;
   display: block;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+.readout-shot.step-query { margin-top: 10px; height: 25mm; }
+.readout-shot.step-score { height: 45mm; }
+.readout-shot.step-result { height: 78mm; }
+.readout-flow-arrow {
+  height: 6mm;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  font-size: 15pt;
+  font-weight: 800;
+  line-height: 1;
 }
 .arch-bottom {
   display: grid;
@@ -1073,8 +1090,8 @@ ul.clean li::before {
   border-radius: 4px;
   background: rgba(245,158,11,0.12);
   color: #b45309;
-  font-size: 7.4pt;
-  font-weight: 600;
+  font-size: 9pt;
+  font-weight: 579;
 }
 
 .embedding-evolution {
@@ -1259,48 +1276,13 @@ ul.clean li::before {
   </header>
 
 
-  <!-- =================== SYSTEM OVERVIEW BAND =================== -->
-  <section class="overview" aria-label="ContVAR end-to-end system overview">
-    <h2 class="overview-title">ContVAR System Overview</h2>
-    <div class="ov-step">
-      <span class="ov-num">A</span>
-      <div class="ov-body">
-        <span class="ov-h">Data</span>
-        <span class="ov-p">Gene Ontology · ProteinGym DMS · PDB · AlphaFold2/3  </span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step">
-      <span class="ov-num">B</span>
-      <div class="ov-body">
-        <span class="ov-h">Featurization & Graph Construction</span>
-        <span class="ov-p">Hybrid residue graph · ESM-2 and AA one-hot nodes</span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step ov-encoder">
-      <span class="ov-num">C</span>
-      <div class="ov-body">
-        <span class="ov-h">ContVAR encoder &nbsp;<small>self-supervised</small></span>
-        <span class="ov-p">Phase 0 — GO pretraining &nbsp;·&nbsp; Phase 1 — DMS variant specialization &nbsp;·&nbsp; Learned 256-D embeddings</span>
-      </div>
-    </div>
-    <div class="ov-arrow">→</div>
-    <div class="ov-step ov-decoder">
-      <span class="ov-num">D</span>
-      <div class="ov-body">
-        <span class="ov-h">GO decoder &nbsp;<small>supervised</small></span>
-        <span class="ov-p">MF · BP · CC FFN decoders &nbsp;·&nbsp; WT vs variant delta score</span>
-      </div>
-    </div>
-  </section>
 
   <!-- =================== ARCHITECTURE FIGURE =================== -->
   <section class="architecture-figure" aria-label="ContVAR architecture diagram">
     <div class="arch-top">
       <div>
         <h2 class="arch-title">ContVAR Architecture</h2>
-        <div class="arch-subtitle">A graph encoder learns function-aware protein and variant embeddings; supervised ontology-specific FFN decoders translate variant embeddings into per-GO-term gain / loss scores.</div>
+        <div class="arch-subtitle">A two-module system trained through a three-stage workflow: GO-based encoder pretraining, variant contrastive specialization, and supervised GO-function decoding.</div>
       </div>
     </div>
 
@@ -1316,7 +1298,8 @@ ul.clean li::before {
         <div class="asset-slot figure-slot" aria-label="Protein structure figure">
           <img class="arch-image" src="3d%20protein%20structure.png" alt="3D protein ribbon structure with mutation site highlighted" />
         </div>
-        <p class="arch-p">Wild-type sequence / structure and a single amino-acid variant define the paired inference inputs.</p>
+        <p class="arch-p">Protein structure from PDB or AlphaFold, together with structure prediction of SAVs from ProteinGYM DMS data define the residue-level graph input.
+</p>
       </div>
 
       <div class="arch-arrow">-&gt;</div>
@@ -1368,9 +1351,9 @@ ul.clean li::before {
             <div class="branch-title">Phase 1</div>
             <p class="arch-p">DMS triplets specialize variants with global + local contrastive loss.</p>
             <div class="triplet-mini" aria-hidden="true">
-              <span class="triplet-pill p">A</span>
-              <span class="triplet-pill a">P</span>
-              <span class="triplet-pill n">N</span>
+              <span class="triplet-pill p">Anchor</span>
+              <span class="triplet-pill a">Positive</span>
+              <span class="triplet-pill n">Negative</span>
             </div>
           </div>
         </div>
@@ -1399,7 +1382,7 @@ ul.clean li::before {
             <div class="arch-kicker">Supervised ontology-specific MLP heads</div>
           </div>
         </div>
-        <p class="arch-p">Each MF / BP / CC decoder is a 256→512→1024→512→GO feed-forward network. It trains on native Swiss-Prot annotations, then scores variant embeddings against the WT GO-annotation baseline at inference time.</p>
+        <p class="arch-p">Each MF / BP / CC decoder is a feed-forward network. It trains on native Swiss-Prot annotations, then scores variant embeddings against the WT GO-annotation baseline at inference time.</p>
         <div class="decoder-figure" aria-label="GO decoder architecture figure">
           <img class="decoder-image" src="decoder.png" alt="Decoder network architecture" />
         </div>
@@ -1421,14 +1404,17 @@ ul.clean li::before {
         <div class="arch-stage">
           <span class="arch-num">5</span>
           <div>
-            <div class="arch-h">Functional readout</div>
-            <div class="arch-kicker">Variant score vs. WT GO baseline</div>
+            <div class="arch-h">Interactive prediction</div>
+            <div class="arch-kicker">Variant input to function changes.</div>
           </div>
         </div>
-        <p class="arch-p">The Hugging Face Space combines known WT GO labels with variant decoder probabilities, then reports retained, gained, and lost GO terms.</p>
-        <div class="readout-stack" aria-label="Functional readout gained and lost GO terms">
-          <img class="readout-image" src="gained.png" alt="Gained GO function readout" />
-          <img class="readout-image" src="lost.png" alt="Lost GO function readout" />
+        <p class="arch-p">The Hugging Face Space guides users from variant input to decoder scores and retained, gained, or lost GO terms.</p>
+        <div class="readout-stack" aria-label="Website flow from variant input to GO-term readout">
+          <img class="readout-shot step-query" src="website1.png" alt="Website input screen for protein variant query" />
+          <div class="readout-flow-arrow" aria-hidden="true">&darr;</div>
+          <img class="readout-shot step-score" src="website2.png" alt="Website decoder score screen" />
+          <div class="readout-flow-arrow" aria-hidden="true">&darr;</div>
+          <img class="readout-shot step-result" src="website3.png" alt="Website retained, gained, and lost GO-term results" />
         </div>
       </div>
     </div>
@@ -1491,7 +1477,7 @@ ul.clean li::before {
         <span class="sec-eyebrow">Graph construction</span>
         <h2 class="sec-title">Hybrid residue graph topology</h2>
         <p>
-          Nodes represent residues, combining amino-acid one-hot features with residue-level ESM-2 embeddings.<br>
+          Nodes represent residues, combining amino-acid one-hot features with residue-level ESM-2 embeddings.<br><br>
           Each residue receives a sparse mix of sequence, spatial, and random long-range neighbors. This keeps the graph efficient while preserving local packing and non-local structural signals. This graph construction is inspired by a work called SALAD.
         </p>
         <ul class="clean">
@@ -1601,7 +1587,7 @@ ul.clean li::before {
         <span class="sec-eyebrow">Decoder</span>
         <h2 class="sec-title">Multi-label GO classifier &amp; retention readout</h2>
         <p>
-          The 256-D encoder output is fed into a <strong>supervised feed-forward decoder</strong> with hidden layers <span class="mono">512 → 1024 → 512</span>, BatchNorm, ReLU, and Dropout. It returns GO logits during training and sigmoid probabilities <span class="mono">σ(·) ∈ [0, 1]</span> during inference. A dedicated <strong>NULL_FUNCTION</strong> output unit captures complete loss of function.
+          The 256-D encoder output is fed into a <strong>supervised feed-forward decoder</strong> with 3 hidden layers, BatchNorm, ReLU, and Dropout. It returns GO logits during training and sigmoid probabilities <span class="mono">σ(·) ∈ [0, 1]</span> during inference. A dedicated <strong>NULL_FUNCTION</strong> output unit captures complete loss of function.
         </p>
 
         <div class="pipeline cols-2">
@@ -1618,7 +1604,7 @@ ul.clean li::before {
         </div>
 
         <p style="margin-top:4px">
-          Decoder evaluation reports <strong>mAP</strong> from ranked probabilities and thresholded metrics at <span class="mono">p &gt; 0.95</span>: <span class="mono">Acc, P, R, F1, MCC, AUROC, AUPRC. </span> The full pipeline ships as a <strong>CLI tool</strong> and a <strong>Hugging Face Space</strong> with two paths: <em>(i)</em> structure → predicted GO functions, <em>(ii)</em> WT vs. variant comparison with ClinVar lookup.
+          Decoder evaluation reports <strong>mAP</strong> from ranked probabilities and thresholded metrics optimized via macro-F1 sweeping: Acc, P, R, F1, MCC.</span> The full pipeline ships as a <strong>CLI tool</strong> and a <strong>Hugging Face Space</strong> with two paths: <em>(i)</em> structure → predicted GO functions, <em>(ii)</em> WT vs. variant comparison with ClinVar lookup.
         </p>
       </section>
 
@@ -1628,15 +1614,15 @@ ul.clean li::before {
         <div class="metrics">
           <div class="metric">
             <div class="name">MRR</div>
-            <div class="desc">Mean reciprocal rank of the true positive among <em>{positive, all negatives}</em>.</div>
+            <div class="desc">Measures how highly the model ranks the known positive variant against every negative candidate, with higher values meaning the correct functional match appears near the top.</div>
           </div>
           <div class="metric">
             <div class="name">Alignment</div>
-            <div class="desc">𝔼‖z<sub class="sub">a</sub> − z<sub class="sub">p</sub>‖² — anchor / positive proximity.</div>
+            <div class="desc">Tracks whether the anchor protein and its functionally similar positive variant move close together in embedding space, using 𝔼‖z<sub class="sub">a</sub> − z<sub class="sub">p</sub>‖².</div>
           </div>
           <div class="metric">
             <div class="name">Uniformity</div>
-            <div class="desc">log 𝔼 e<sup class="sup">−2‖z<sub class="sub">i</sub>−z<sub class="sub">j</sub>‖²</sup> — spread on the hypersphere.</div>
+            <div class="desc">Checks whether embeddings remain well spread across the hypersphere instead of collapsing into one cluster, estimated with log 𝔼 e<sup class="sup">−2‖z<sub class="sub">i</sub>−z<sub class="sub">j</sub>‖²</sup>.</div>
           </div>
         </div>
         <p>
@@ -1658,12 +1644,12 @@ ul.clean li::before {
               </tr>
             </thead>
             <tbody>
-              <tr><td>Encoder</td><td>Loss · total</td><td class="num"><span class="placeholder-tag">to fill</span></td><td class="num"><span class="placeholder-tag">to fill</span></td></tr>
-              <tr><td>Encoder</td><td>MRR</td><td class="num"><span class="placeholder-tag">to fill</span></td><td class="num"><span class="placeholder-tag">to fill</span></td></tr>
-              <tr><td>Encoder</td><td>Alignment / Uniformity</td><td class="num"><span class="placeholder-tag">to fill</span></td><td class="num"><span class="placeholder-tag">to fill</span></td></tr>
-              <tr><td>Decoder · MF</td><td>F1 / MCC / AUPRC</td><td class="num"><span class="placeholder-tag">to fill</span></td><td class="num"><span class="placeholder-tag">to fill</span></td></tr>
-              <tr><td>Decoder · BP</td><td>F1 / MCC / AUPRC</td><td class="num"><span class="placeholder-tag">to fill</span></td><td class="num"><span class="placeholder-tag">to fill</span></td></tr>
-              <tr><td>Decoder · CC</td><td>F1 / MCC / AUPRC</td><td class="num"><span class="placeholder-tag">to fill</span></td><td class="num"><span class="placeholder-tag">to fill</span></td></tr>
+              <tr><td>Encoder</td><td>Loss · total</td><td class="num"><span class="placeholder-tag">0.162</span></td><td class="num"><span class="placeholder-tag">0.166</span></td></tr>
+              <tr><td>Encoder</td><td>MRR</td><td class="num"><span class="placeholder-tag">0.127</span></td><td class="num"><span class="placeholder-tag">0.121</span></td></tr>
+              <tr><td>Encoder</td><td>Alignment / Uniformity</td><td class="num"><span class="placeholder-tag">0.038/-0.74</span></td><td class="num"><span class="placeholder-tag"> 0.019/-0.718</span></td></tr>
+              <tr><td>Decoder · MF</td><td>F1 / MCC / mAP</td><td class="num"><span class="placeholder-tag">0,679/0,691/0,7445</span></td><td class="num"><span class="placeholder-tag">0,661/0,673/0,728</span></td></tr>
+              <tr><td>Decoder · BP</td><td>F1 / MCC / mAP</td><td class="num"><span class="placeholder-tag">0,384/0,400/0,437</span></td><td class="num"><span class="placeholder-tag">0,375/0,391/0,424</span></td></tr>
+              <tr><td>Decoder · CC</td><td>F1 / MCC / mAP</td><td class="num"><span class="placeholder-tag">0,535/0,547/0,586</span></td><td class="num"><span class="placeholder-tag">0,533/0,544/0,582</span></td></tr>
             </tbody>
           </table>
 
@@ -1695,6 +1681,7 @@ ul.clean li::before {
         <li>Lin Z. et al. <em>Evolutionary-scale prediction of atomic-level protein structure (ESM-2).</em> Science 2023.</li>
         <li>Jamasb A. et al. <em>Graphein — geometric deep learning on protein structures.</em> NeurIPS 2022.</li>
         <li>Notin P. et al. <em>ProteinGym: large-scale benchmarks for protein design and fitness prediction.</em> NeurIPS 2023.</li>
+        <li>Jendrusch M., Korbel J. O. <em>Efficient protein structure generation with sparse denoising models.</em> Nature Machine Intelligence 2025.</li>
       </ol>
     </div>
 
