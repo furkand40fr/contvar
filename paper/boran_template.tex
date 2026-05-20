@@ -8,6 +8,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{caption}
+\usepackage{parskip}
 \captionsetup{font=small, labelfont=bf, skip=2pt}
 \setlength{\abovecaptionskip}{2pt}
 \setlength{\belowcaptionskip}{4pt}
@@ -76,20 +77,20 @@ Figure~\ref{fig:pipeline} summarizes the full workflow from structure-derived re
 
 ContVAR is organized as two training stages that share a common protein identifier space:
 \begin{enumerate}
-    \item \textbf{Mutation-aware graph encoder.} Training proceeds in two phases. \textbf{Phase~0} performs GO semantic-similarity triplet pretraining with ontology-specific heads (MF, BP, CC) on prebuilt residue graphs. \textbf{Phase~1} specializes the same backbone on DMS protein-family triplets with a joint global graph-level and local mutation-site contrastive loss; streaming semi-hard negative mining is active from the first phase~1 epoch (there is no separate warm-up pass over the full DMS corpus before mining).
+    \item \textbf{Mutation-aware graph encoder.} Training proceeds in two phases. \textbf{Phase~0} performs GO semantic-similarity triplet pretraining with ontology-specific heads (MF, BP, CC) on residue graphs. \textbf{Phase~1} specializes the same backbone on DMS protein-family triplets with a joint global graph-level and local mutation-site contrastive loss; streaming semi-hard negative mining is active from the first phase~1 epoch.
     \item \textbf{Supervised GO decoder and variant function-change inference.} A feed-forward decoder (\texttt{FFNDecoder}) is trained on frozen encoder embeddings as a multi-label GO classifier under UniRef50 cluster-aware splits, separately for each GO aspect (MF, BP, CC). At inference, variant embeddings are scored and combined with curated wild-type (WT) GO annotations from GOA to produce per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
 \end{enumerate}
 Encoder and decoder use different supervision signals---DMS-driven contrastive geometry versus protein-level GO multi-label annotations---and are linked through a persisted encoder checkpoint and protein embeddings keyed by UniProt identifier.
 
 \subsection{Dataset Description}
-\textbf{DMS (phase~1) track.} The mutagenesis corpus is organized by protein family with one wild-type anchor, multiple positives, and multiple negatives per family. The fixed split file shipped with the project contains 97 families (93 train, 2 validation, 2 test) to avoid family leakage across splits. Raw structures are consumed as mmCIF/CIF files, and per-residue ESM-2 embeddings are loaded from a precomputed store keyed by normalized protein identifiers. Mutated residue positions are parsed from variant filenames during collation and mining. ProteinGym-style curation~\cite{notin2023proteingym} informs this triplet organization.
+\textbf{DMS (phase~1) track.} The mutagenesis corpus is organized by protein family with one wild-type anchor, multiple positives, and multiple negatives per family. Starting from the ProteinGym Deep Mutational Scanning benchmark~\cite{notin2023proteingym}, we retained proteins with sequence length at most 656 residues, giving 97 unique proteins. When an assay annotated only a protein segment, the corresponding full-length sequence was reconstructed and variant coordinates were remapped to the full-length residue index so that the graph encoder always received complete protein context. For each protein, the positive pool was built from 50 neutral variants selected immediately above the assay cutoff indicating retained-functionality while the negative pool used the 50 lowest-fitness score variants as deleterious examples; selection was sequence-position stratified to reduce clustering in a single domain or local region. This produced exactly 9,700 curated variants before graph construction. The DMS split respects the UniRef50-aware protein split used for phase~0 and decoder training: if a DMS protein is present in that split, the wild type and all of its variants inherit the same train/validation/test assignment; DMS proteins absent from the UniRef50 split are conservatively assigned to training. The resulting fixed DMS split contains 97 families (93 train, 2 validation, 2 test), preventing variant-level leakage across held-out protein families. Raw structures are consumed as mmCIF/CIF files, and per-residue ESM-2 embeddings are loaded from a precomputed store keyed by normalized protein identifiers. Mutated residue positions are parsed from variant filenames during collation and mining.
 
-\textbf{GO (phase~0) track.} Phase~0 consumes prebuilt residue graphs and ontology-specific semantic-similarity tables. Positives use similarity $\geq 0.8$; negatives use similarity $\leq 0.2$ and are sampled from low/mid bins ([0.0,0.1), [0.1,0.2]) for hardness balancing. The loader also drops triplets whose proteins are missing in the prebuilt graph index.
+\textbf{GO (phase~0) track.} Phase~0 consumes residue graphs and ontology-specific semantic-similarity tables under the shared UniRef50-aware protein split, which contains 122,190 proteins (97,771 train, 12,093 validation, 12,326 test). Positives use similarity $\geq 0.8$; negatives use similarity $\leq 0.2$ and are sampled from low/mid bins ([0.0,0.1), [0.1,0.2]) for hardness balancing. 
 
 \textbf{Structure interchange vs.\ cached graphs.} CIF/mmCIF is the portable format for atomic coordinates; serialized graph tensors cache parsing, featurization, and edge construction for reuse.
 
 \subsection{Dataset Preparation / Preprocessing}
-\textbf{From structures to residue graphs (DMS path).} Per-residue $\mathrm{C}_\alpha$ coordinates and amino-acid identities are extracted from monomer structures and assembled into PyTorch Geometric graphs. Connectivity uses the hybrid edge scheme below; an optional pure $k$NN baseline (Graphein-style) is available for ablations.
+\textbf{From structures to residue graphs (DMS path).} Three-dimensional structures for the selected wild-type and variant sequences were generated with AlphaFold3. To reduce folding cost on the compute cluster, available assay/MSA resources were reused instead of regenerating alignments from scratch. The resulting mmCIF/CIF files are treated as fixed structural inputs for graph construction. Per-residue $\mathrm{C}_\alpha$ coordinates and amino-acid identities are extracted from these monomer structures and assembled into PyTorch Geometric graphs. Connectivity uses the hybrid edge scheme below; an optional pure $k$NN baseline (Graphein-style) is available for ablations.
 
 Node features concatenate a residue-identity one-hot and a per-residue ESM-2 embedding:
 \[
@@ -127,7 +128,7 @@ with default $m_{go}=0.2$. Active ontology losses are averaged per step. Optiona
 
 \subsubsection{Phase 1: DMS encoder training (global triplet + local contrastive loss)}
 \label{sec:phase1-dms}
-After phase~0, phase~1 loads DMS protein-family triplets under a fixed train/validation/test split (97 families: 93 train, 2 validation, 2 test), initializes weights from the phase~0 checkpoint, and runs one contrastive training loop for 200 epochs by default. Training does \textbf{not} alternate between a full-corpus epoch without mining and a later mining phase: every step performs streaming semi-hard negative selection and rebuilds batches each epoch.
+After phase~0, phase~1 loads DMS protein-family triplets under the UniRef50-respecting fixed split described above (97 families: 93 train, 2 validation, 2 test) and initializes weights from the phase~0 checkpoint. Phase~1 uses streaming semi-hard negative mining from the first training epoch: each epoch reshuffles protein families, samples positives, scans candidate negatives in chunks, and rebuilds mined batches online. Exhaustive positive$\times$negative enumeration is reserved for validation and test.
 
 \paragraph{Per-batch mining and forward pass.}
 Families are shuffled and grouped into mining batches of size 8. For each batch:
@@ -154,7 +155,7 @@ with $y_i=1$ on positive pairs and $y_i=0$ on negative pairs. The hardest global
 \]
 
 \paragraph{Optimization, validation, and checkpoints.}
-Optimizer: AdamW (learning rate $10^{-4}$, weight decay 0.01) with gradient accumulation over four steps and gradient clipping at norm 1.0. Validation and test enumerate every positive$\times$negative pair per family for stable ranking metrics. The phase~1 checkpoint with lowest validation $\mathcal{L}_{\text{total}}$ is retained for embedding export and decoder training.
+Phase~1 training runs for 200 epochs by default. Optimizer: AdamW (learning rate $10^{-4}$, weight decay 0.01) with gradient accumulation over four steps and gradient clipping at norm 1.0. Validation and test enumerate every positive$\times$negative pair per family for stable ranking metrics. The phase~1 checkpoint with lowest validation $\mathcal{L}_{\text{total}}$ is retained for embedding export and decoder training.
 
 \subsubsection{Supervised GO decoder}
 \label{sec:decoder}
@@ -166,7 +167,7 @@ The decoder consumes protein-level embeddings from the trained encoder (256 dime
 Labels are taken from UniProt-GOA Swiss-Prot, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten training proteins. A dedicated \texttt{NULL\_FUNCTION} class is appended to flag predicted complete loss of function.
 
 \paragraph{Dataset and UniRef50-aware splits.}
-Training proteins are partitioned by UniRef50 cluster so that no cluster appears in more than one of train, validation, or test; the same partition is shared with phase~0 evaluation where applicable. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
+Training proteins are partitioned by UniRef50 cluster so that no cluster appears in more than one of train, validation, or test. This same protein-level partition is used by phase~0 and by all three decoder aspects, and the DMS family split inherits it where the DMS protein is present in the UniRef50 mapping. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
 
 \paragraph{Architecture.}
 \texttt{FFNDecoder} is a feed-forward network with hidden widths $512 \to 1024 \to 512$, batch normalization, ReLU activations, and dropout ($p=0.3$, tapered in the last hidden block). The head outputs logits per GO term; sigmoid is applied at inference.
