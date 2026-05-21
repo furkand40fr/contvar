@@ -9,6 +9,8 @@
 \usepackage{amssymb}
 \usepackage{caption}
 \usepackage{parskip}
+\usepackage{float}
+\usepackage{placeins}
 \captionsetup{font=small, labelfont=bf, skip=2pt}
 \setlength{\abovecaptionskip}{2pt}
 \setlength{\belowcaptionskip}{4pt}
@@ -167,7 +169,7 @@ Phase~1 training runs for 200 epochs by default. Optimizer: AdamW (learning rate
 \label{sec:decoder}
 
 \paragraph{Scope.}
-The decoder consumes protein-level embeddings from the trained encoder (256 dimensions) or, in ablations, raw ESM-2 embeddings (1{,}280 dimensions). It outputs multi-label GO probabilities under Molecular Function (MF), Biological Process (BP), and Cellular Component (CC). One decoder is trained independently per aspect.
+The decoder consumes protein-level embeddings from the trained encoder (256 dimensions) or, in ablations, raw ESM-2 embeddings (1{,}280 dimensions) or their concatenation (1{,}536 dimensions). It outputs multi-label GO probabilities under Molecular Function (MF), Biological Process (BP), and Cellular Component (CC). One decoder is trained independently per aspect.
 
 \paragraph{GO annotation source and vocabulary.}
 Labels are taken from UniProt-GOA Swiss-Prot, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten training proteins. A dedicated \texttt{NULL\_FUNCTION} class is appended to flag predicted complete loss of function.
@@ -176,7 +178,7 @@ Labels are taken from UniProt-GOA Swiss-Prot, excluding electronic (\texttt{IEA}
 Training proteins are partitioned by UniRef50 cluster so that no cluster appears in more than one of train, validation, or test. This same protein-level partition is used by phase~0 and by all three decoder aspects, and the DMS family split inherits it where the DMS protein is present in the UniRef50 mapping. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
 
 \paragraph{Architecture.}
-\texttt{FFNDecoder} is a feed-forward network with hidden widths $512 \to 1024 \to 512$, batch normalization, ReLU activations, and dropout ($p=0.3$, tapered in the last hidden block). The head outputs logits per GO term; sigmoid is applied at inference.
+\texttt{FFNDecoder} is a feed-forward network. For the 256-d and 1{,}280-d inputs the hidden widths are $512 \to 1024 \to 512$; for the 1{,}536-d concatenated input they are $1024 \to 512$. Each hidden block applies batch normalization, ReLU activation, and dropout ($p=0.3$, tapered to $p \approx 0.2$ in the last hidden block). The head outputs logits per GO term; sigmoid is applied at inference.
 
 \paragraph{Class-balanced multi-label loss.}
 Training uses binary cross-entropy with logits and positive-class weights. For GO term $c$,
@@ -190,7 +192,7 @@ where $n_c^{+}$ is the number of training proteins with term $c$, $N$ is the tra
 AdamW with learning rate $10^{-3}$ and weight decay $10^{-4}$; cosine annealing over 100 epochs; batch size 256. The best validation mAP checkpoint is kept; training stops if mAP fails to improve by more than $10^{-4}$ for ten consecutive epochs. Metrics are logged to Weights \& Biases.
 
 \paragraph{Decoder evaluation metrics.}
-Validation and test use logits converted to probabilities. GO terms with zero positives in a split are excluded from mAP. At probability threshold 0.95 we report macro-averaged F1, precision, recall, subset accuracy, and MCC.
+Validation and test use logits converted to probabilities. GO terms with zero positives in a split are excluded from mAP. For thresholded metrics we sweep a probability grid from 0.05 to 0.95 in steps of 0.05 and select the threshold maximizing macro F1; at the selected threshold we report macro-averaged F1, precision, recall, subset accuracy, and MCC.
 
 \paragraph{Variant function-change inference.}
 The decoder is run on \emph{variant} embeddings only; wild-type GO annotations are looked up directly from GOA (the database is the source of truth for the WT). For a variant with embedding $\mathbf{z}_{\text{var}}$ let $\mathbf{s}=\sigma(\text{FFNDecoder}(\mathbf{z}_{\text{var}}))\in[0,1]^C$. For each annotated WT GO term $g$:
@@ -217,24 +219,26 @@ Variant embeddings are scored in batch; wild-type accessions and mutation tokens
 During phase~0 and phase~1 we log total, global, and local losses; mean reciprocal rank (MRR), alignment, and uniformity on $\ell_2$-normalized embeddings; global and local distance margins; and per-batch counts of hard, semi-hard, and easy mined negatives. Validation and test use exhaustive positive$\times$negative combinations per family. The encoder checkpoint with lowest validation total loss is re-evaluated on held-out families before decoder training.
 
 \paragraph{Decoder-side metrics.}
-Each aspect (MF, BP, CC) is evaluated under the shared UniRef50 cluster-aware split. We report mAP over terms with at least one positive in the split, and at threshold 0.95 macro-averaged F1, precision, recall, accuracy, and MCC. The validation mAP-best model is evaluated on the test split.
+Each aspect (MF, BP, CC) is evaluated under the shared UniRef50 cluster-aware split. We report mAP over terms with at least one positive in the split, and at the F1-optimal probability threshold (swept from 0.05 to 0.95 in steps of 0.05) macro-averaged F1, precision, recall, accuracy, and MCC. The validation mAP-best model is evaluated on the test split.
 
 \paragraph{Variant-level metrics.}
 When experimental variant labels are available (e.g.\ ProteinGym-style fitness), we report AUROC and AUPRC of \texttt{ContVAR\_fitness}, mean fitness per label class, and counts of LOSS / GAIN / NEUTRAL calls per variant.
 
 \section{Results and Discussion}
 
-Results below are reported as placeholders until final training runs are consolidated; table layouts are fixed so that partial numbers from W\&B or internal logs can be dropped in without restructuring. Decoder comparisons use three \emph{embedding sources} for the same \texttt{FFNDecoder} architecture and training recipe (UniRef50 cluster-aware splits, threshold 0.95 for thresholded metrics):
+Results below are reported as placeholders until final training runs are consolidated; table layouts are fixed so that partial numbers from W\&B or internal logs can be dropped in without restructuring. Decoder comparisons use five \emph{embedding sources} for the same \texttt{FFNDecoder} architecture and training recipe (UniRef50 cluster-aware splits, F1-optimal threshold for thresholded metrics):
 \begin{itemize}
     \item \textbf{ContVAR (full):} encoder after phase~0 and phase~1 (256-d graph embeddings).
     \item \textbf{ESM-2 baseline:} raw 650M ESM-2 protein embeddings (1{,}280-d), no ContVAR encoder.
     \item \textbf{Phase-0 encoder:} embeddings from the GO-pretrained encoder only, without phase~1 DMS fine-tuning (256-d).
+        \item \textbf{ESM-2 + Phase-0 (concat):} concatenation of raw ESM-2 and phase-0-only encoder embeddings (1{,}536-d), isolates the added value of phase~1 DMS fine-tuning in the concatenated setting.
+        \item \textbf{ESM-2 + ContVAR (concat):} concatenation of raw ESM-2 and full ContVAR encoder embeddings (1{,}536-d).
 \end{itemize}
 
 \subsection{Encoder: phase~1 (DMS) metrics}
 Phase~1 contrastive training is evaluated on the held-out DMS families with exhaustive anchor--positive--negative pairs. Table~\ref{tab:encoder-main} reports the \textbf{ContVAR (full)} encoder at its best validation checkpoint; phase-0-only and random-init encoder ablations can be added alongside if needed.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Encoder metrics on the DMS family split at the best phase~1 validation checkpoint (\textbf{ContVAR full} encoder: phase~0 + phase~1).}
 \label{tab:encoder-main}
@@ -253,12 +257,13 @@ Uniformity & [\_] & [\_] \\
 \end{table}
 
 \subsection{Decoder: wild-type GO function prediction (validation and test)}
-Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table~\ref{tab:decoder-ablation} compares the three embedding sources on the standard UniRef50-based annotation val/test split (protein-level multi-label GO prediction).
+Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table~\ref{tab:decoder-ablation} compares the five embedding sources on the standard UniRef50-based annotation val/test split (protein-level multi-label GO prediction).
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\small
-\caption{Decoder ablation on wild-type GO annotation. Rows group by embedding source and aspect; Val/Test are the held-out protein splits. mAP excludes terms with zero positives in that split; F1, precision, recall, accuracy, and MCC are macro-averaged at probability threshold 0.95.}
+\footnotesize
+\renewcommand{\arraystretch}{0.7}
+\caption{Decoder ablation on wild-type GO annotation. Rows group by embedding source and aspect; Val/Test are the held-out protein splits. mAP excludes terms with zero positives in that split; F1, precision, recall, accuracy, and MCC are macro-averaged at the F1-optimal probability threshold (swept 0.05--0.95).}
 \label{tab:decoder-ablation}
 \begin{tabular}{lllcccccc}
 \hline
@@ -285,15 +290,29 @@ Phase-0 encoder & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \hline
+ESM-2 + Phase-0 & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+\hline
+ESM-2 + ContVAR & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+\hline
 \end{tabular}
 \end{table}
 
 \subsection{Variant-level evaluation on DMS assay labels}
-For variants with experimental fitness or pathogenicity labels in the DMS corpus, \texttt{ContVAR\_fitness} from the \textbf{ContVAR (full)} pipeline is correlated with the binary assay label (Table~\ref{tab:variant-dms}). The same three embedding/decoding conditions as Table~\ref{tab:decoder-ablation} can be reported here if variant scoring is repeated per model.
+For variants with experimental fitness or pathogenicity labels in the DMS corpus, \texttt{ContVAR\_fitness} from the \textbf{ContVAR (full)} pipeline is correlated with the binary assay label (Table~\ref{tab:variant-dms}). The same five embedding/decoding conditions as Table~\ref{tab:decoder-ablation} can be reported here if variant scoring is repeated per model.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\caption{Variant-level metrics on the DMS-labeled variant pool (\texttt{ContVAR\_fitness} vs.\ experimental label). Primary row block: ContVAR (full); add ESM-2 baseline and phase-0 encoder rows when variant embeddings are exported for those conditions.}
+\caption{Variant-level metrics on the DMS-labeled variant pool (\texttt{ContVAR\_fitness} vs.\ experimental label). Primary row block: ContVAR (full); add ESM-2 baseline, phase-0 encoder, ESM-2 + Phase-0 and ESM-2 + ContVAR rows when variant embeddings are exported for those conditions.}
 \label{tab:variant-dms}
 \begin{tabular}{llcccccc}
 \hline
@@ -308,6 +327,12 @@ ESM-2 baseline & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + Phase-0 & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 + ContVAR & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \hline
 \end{tabular}
 \end{table}
@@ -315,7 +340,7 @@ Phase-0 encoder & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \subsection{Variant function-change cohort}
 Separately from the DMS assay pool, we evaluate variants in a curated \textbf{function-change cohort}: proteins with experimentally supported or manually verified GO-level loss or gain of function upon mutation (cohort assembly in progress). This set stresses whether LOSS/GAIN/NEUTRAL calls and \texttt{ContVAR\_fitness} align with known function-change cases rather than bulk fitness ranking alone. Table~\ref{tab:variant-funcchange} will report the same embedding-source comparison; numbers to be filled from the cohort evaluation pipeline.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Performance on the variant \textbf{function-change cohort} (curated proteins with annotated GO function change). Metrics mirror Table~\ref{tab:variant-dms} but restricted to cohort members; optional columns for per-class LOSS/GAIN/NEUTRAL agreement can be added when labels are finalized.}
 \label{tab:variant-funcchange}
@@ -332,6 +357,12 @@ ESM-2 baseline & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 Phase-0 encoder & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 Phase-0 & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 Phase-0  & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 Phase-0  & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 ContVAR  & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 ContVAR  & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
+ESM-2 ContVAR  & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \hline
 \end{tabular}
 \end{table}
@@ -347,7 +378,6 @@ Phase-0 encoder & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \item Mutation-site local-distance profiles for selected variants.
 \item Per-variant LOSS/GAIN/NEUTRAL summaries for well-studied disease variants with WT GO from GOA.
 \end{itemize}
-
 \section{Conclusion and Future Work}
 
 \subsection{Conclusion}
