@@ -232,7 +232,21 @@ The Space runs the same graph-based inference path used by the project: it parse
 \subsection{Evaluation Metrics}
 
 \paragraph{Encoder-side metrics.}
-During phase~0 and phase~1 we log total, global, and local losses; mean reciprocal rank (MRR), alignment, and uniformity on $\ell_2$-normalized embeddings; global and local distance margins; and streaming-mining statistics for hard, semi-hard, easy, evaluated, and qualifying candidate negatives. Validation and test use exhaustive positive$\times$negative combinations per family. The encoder checkpoint with lowest validation total loss is re-evaluated on held-out families before decoder training.
+During phase~0 and phase~1 we log total, global, and local losses; global and local distance margins; streaming-mining statistics for hard, semi-hard, easy, evaluated, and qualifying candidate negatives; and three geometry/retrieval diagnostics on $\ell_2$-normalized global embeddings~\cite{wang2020hypersphere}. Validation and test use exhaustive positive$\times$negative combinations per family. The encoder checkpoint with lowest validation total loss is re-evaluated on held-out families before decoder training.
+
+\textbf{Alignment} measures how close anchor and positive embeddings are. Following Wang and Isola~\cite{wang2020hypersphere}, we report the mean squared Euclidean distance between paired embeddings,
+\[
+\mathcal{L}_{\text{align}} \;=\; \frac{1}{B}\sum_{i=1}^{B}\|\mathbf{z}_a^{(i)}-\mathbf{z}_p^{(i)}\|_2^2,
+\]
+where $B$ is the batch size. Lower values indicate that functionally similar variants (anchors and their positives) occupy nearby points on the unit hypersphere---the ``alignment'' objective of contrastive learning.
+
+\textbf{Uniformity} quantifies how evenly embeddings fill the hypersphere rather than collapsing into a narrow cone. On the concatenated set of anchor, positive, and negative embeddings $\{\mathbf{z}\}$, we compute
+\[
+\mathcal{L}_{\text{unif}} \;=\; \log\!\left(\frac{1}{|\mathcal{P}|}\sum_{(\mathbf{z}_i,\mathbf{z}_j)\in\mathcal{P}} e^{-t\,\|\mathbf{z}_i-\mathbf{z}_j\|_2^2}\right),
+\]
+with temperature $t{=}2$ and $\mathcal{P}$ the set of unordered pairs ($|\mathcal{P}|$ from pairwise distances). Lower (more negative) values indicate greater spread. This matches the reference implementation (\url{https://github.com/ssnl/align_uniform}) of Wang and Isola~\cite{wang2020hypersphere}.
+
+\textbf{Mean reciprocal rank (MRR)} evaluates retrieval within each mini-batch. For anchor $i$, all positives and negatives in the batch form a candidate pool; candidates are ranked by ascending $\ell_2$ distance to the anchor. The rank $r_i$ of the matching positive (the $i$-th positive) yields $\mathrm{MRR}=\frac{1}{B}\sum_i 1/r_i$. MRR${=}1$ when every anchor retrieves its positive as the nearest neighbor; values near zero indicate frequent mis-ranking of positives behind negatives. Together, alignment and uniformity decompose representation quality into ``similar things close'' and ``dissimilar things spread out''; MRR summarizes whether the metric space supports correct within-batch retrieval under the triplet mining setup.
 
 \paragraph{Decoder-side metrics.}
 Each aspect (MF, BP, CC) is evaluated under the shared UniRef50 cluster-aware split. We report mAP over terms with at least one positive in the split, and at the F1-optimal probability threshold (swept from 0.05 to 0.95 in steps of 0.05) macro-averaged F1, precision, recall, accuracy, and MCC. The validation mAP-best model is evaluated on the test split.
