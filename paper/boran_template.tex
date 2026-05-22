@@ -223,6 +223,12 @@ is computed over the GO terms annotated in the wild type (excluding \texttt{NULL
 \paragraph{Batch variant scoring.}
 Variant embeddings are scored in batch; wild-type accessions and mutation tokens are parsed from record identifiers. Variants whose wild type lacks GOA coverage are skipped. When experimental binary labels are available, AUROC and AUPRC of \texttt{ContVAR\_fitness} against the label summarize variant-level agreement with assays.
 
+\subsubsection{Interactive Hugging Face Space}
+\label{sec:hf-space}
+To make ContVAR accessible beyond offline batch execution, we also provide an interactive Hugging Face Space for structure-level inference. The Space exposes two user workflows. In the single-protein workflow, users upload one PDB or CIF structure and receive ranked GO predictions across MF, BP, and CC. In the WT-versus-variant workflow, users upload matched wild-type and variant structures and receive WT score, variant score, score difference, and a derived gained/lost/stable status for the highest-changing GO terms. Results are displayed as aspect-specific tables and summary panels, with downloadable prediction files for downstream inspection.
+
+The Space runs the same graph-based inference path used by the project: it parses uploaded structures, extracts the amino-acid sequence and residue coordinates, computes ESM-2 residue embeddings on the fly, constructs the hybrid residue graph, applies the trained ContVAR encoder, and decodes GO scores with the per-aspect FFN decoders. The public interface is intended as a lightweight demonstration and inspection layer rather than a replacement for large-scale batch scoring. We also added a clinical-context panel: when a submitted protein or mapped variant has a ClinVar record, available clinical information will be shown alongside the GO prediction results in a separate boxed summary.
+
 \subsection{Evaluation Metrics}
 
 \paragraph{Encoder-side metrics.}
