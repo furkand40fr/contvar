@@ -149,7 +149,7 @@ with default $m_{go}=0.2$. Active ontology losses are averaged per step. Optiona
 After phase~0, phase~1 loads DMS protein-family triplets under the UniRef50-respecting fixed split described above (97 families: 93 train, 2 validation, 2 test) and initializes weights from the phase~0 checkpoint. Phase~1 uses streaming semi-hard negative mining from the first training epoch: each epoch reshuffles protein families, samples positives, scans candidate negatives in chunks, and rebuilds mined batches online. Exhaustive positive$\times$negative enumeration is reserved for validation and test.
 
 \paragraph{Per-batch mining and forward pass.}
-Families are shuffled and grouped into mining batches of size 8. For each batch:
+Families are shuffled and grouped into mining batches. Gradients are accumulated over four mined batches before each optimizer update. For each batch:
 \begin{enumerate}
     \item One positive variant per family is sampled; anchor and positive residue graphs are loaded from cache or built on the fly.
     \item The current model embeds anchors and positives (no gradient) to obtain $d_{ap}=d(\mathbf{z}_a^g,\mathbf{z}_p^g)$.
@@ -232,7 +232,7 @@ The Space runs the same graph-based inference path used by the project: it parse
 \subsection{Evaluation Metrics}
 
 \paragraph{Encoder-side metrics.}
-During phase~0 and phase~1 we log total, global, and local losses; mean reciprocal rank (MRR), alignment, and uniformity on $\ell_2$-normalized embeddings; global and local distance margins; and per-batch counts of hard, semi-hard, and easy mined negatives. Validation and test use exhaustive positive$\times$negative combinations per family. The encoder checkpoint with lowest validation total loss is re-evaluated on held-out families before decoder training.
+During phase~0 and phase~1 we log total, global, and local losses; mean reciprocal rank (MRR), alignment, and uniformity on $\ell_2$-normalized embeddings; global and local distance margins; and streaming-mining statistics for hard, semi-hard, easy, evaluated, and qualifying candidate negatives. Validation and test use exhaustive positive$\times$negative combinations per family. The encoder checkpoint with lowest validation total loss is re-evaluated on held-out families before decoder training.
 
 \paragraph{Decoder-side metrics.}
 Each aspect (MF, BP, CC) is evaluated under the shared UniRef50 cluster-aware split. We report mAP over terms with at least one positive in the split, and at the F1-optimal probability threshold (swept from 0.05 to 0.95 in steps of 0.05) macro-averaged F1, precision, recall, accuracy, and MCC. The validation mAP-best model is evaluated on the test split.
