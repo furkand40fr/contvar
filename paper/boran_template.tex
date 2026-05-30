@@ -29,14 +29,14 @@ Determining the functional consequences of single amino acid variants (SAVs) rem
 \section{Introduction}
 The functional annotation of proteins and the accurate interpretation of single amino acid variants (SAVs) are essential for unraveling disease mechanisms, understanding oncogenic transformations, and guiding targeted therapeutics. Advances in high-throughput sequencing have produced large catalogs of coding variation; however, experimental characterization remains costly, leaving many variants classified as variants of uncertain significance (VUS).
 
-Computational variant effect prediction (VEP) methods are therefore widely used. Classical approaches, such as SIFT~\cite{ng2001predicting}, PolyPhen-2~\cite{adzhubei2010method}, and CADD~\cite{kircher2014general}, rely on conservation and hand-crafted descriptors to estimate deleteriousness. More recent sequence-first models, including language-model-based paradigms~\cite{meier2021language,lin2023evolutionary}, improve zero/few-shot generalization by learning distributional constraints from large corpora. However, most VEP pipelines still optimize scalar pathogenicity signals rather than structured function-level objectives.
+Computational variant effect prediction (VEP) methods are therefore widely used. Classical approaches, such as SIFT~\cite{ng2001predicting}, PolyPhen-2~\cite{adzhubei2010method}, and CADD~\cite{kircher2014general}, rely on conservation and hand-crafted descriptors to estimate deleteriousness. More recent sequence-first models, including language-model-based VEP paradigms~\cite{meier2021language} and large-scale protein language models~\cite{lin2023evolutionary}, improve zero/few-shot generalization by learning distributional constraints from large corpora. However, most VEP pipelines still optimize scalar pathogenicity signals rather than structured function-level objectives.
 
 In parallel, automated protein function prediction has moved from sequence-similarity transfer to deep neural annotation models such as DeepGOPlus~\cite{kulmanov2019deepgoplus}, DeepFRI~\cite{gligorijevic2021structure}, TALE~\cite{cao2021tale}, and network-aware graph models such as DeepGraphGO~\cite{zhang2021deepgraphgo}. These methods are effective for wild-type GO assignment, but they are generally not designed around anchor--positive--negative mutation triplets, and thus do not directly enforce mutation-sensitive metric geometry.
 
 \paragraph{Problem statement.}
 Current literature leaves a practical gap between (i) ontology-aware representation learning and (ii) mutation-specific discrimination at protein-family split level. In our setting, this gap appears as follows: GO similarity supervision exists only as semantic pairs/triplets on cached protein graphs, while DMS training requires dynamic hard-negative selection over many candidate variants per family. A model that ignores either side tends to underperform for one of two goals---semantic organization (GO) or mutation separation (DMS). We therefore target a joint training regime that preserves GO-informed structure in initialization and then sharpens mutation-aware separation with explicit local supervision at the altered residue.
 
-This work introduces ContVAR, a graph metric-learning framework that explicitly connects GO-structured semantic priors with DMS-driven contrastive supervision. ContVAR builds residue graphs from monomer coordinates (e.g., AlphaFold-predicted structures~\cite{jumper2021highly}), combines ESM-2 embeddings with residue identity encodings, and trains a shared encoder with ontology-specific phase~0 heads followed by phase~1 DMS specialization under a joint global+local objective.
+This work introduces ContVAR, a graph metric-learning framework that explicitly connects GO-structured semantic priors with DMS-driven contrastive supervision. ContVAR builds residue graphs from monomer coordinates (e.g., AlphaFold2 models from the AlphaFold Database~\cite{jumper2021highly,varadi2022afdb}), combines ESM-2 embeddings with residue identity encodings, and trains a shared encoder with ontology-specific phase~0 heads followed by phase~1 DMS specialization under a joint global+local objective.
 
 \section{Related Work}
 
@@ -48,7 +48,7 @@ Metric learning on biological objects often uses triplet-style objectives to imp
 \paragraph{Variant effect prediction.}
 Early VEP tools rely on evolutionary conservation and biophysical heuristics. SIFT~\cite{ng2001predicting} classifies substitutions as tolerated or damaging by comparing amino acid properties at conserved positions derived from homologous sequences. PolyPhen-2~\cite{adzhubei2010method} combines sequence-based features with structural information (solvent accessibility, dihedral angles) in a Naïve Bayes classifier. CADD~\cite{kircher2014general} moves beyond single-residue heuristics by integrating dozens of heterogeneous annotations (conservation, regulatory context, protein features) into a single pathogenicity score via a trained support vector machine.
 
-The advent of large protein language models opened a sequence-first paradigm for VEP. ESM-1v~\cite{meier2021language} performs zero-shot prediction of the effect of missense mutations by scoring sequences with a masked-language-model objective, demonstrating that evolutionary co-variation implicit in pre-training data captures functional constraints without explicit labels. ESM-2~\cite{lin2023evolutionary} scales this to 650M--15B parameters and achieves strong performance across multiple DMS benchmarks.
+The advent of large protein language models opened a sequence-first paradigm for VEP. ESM-1v~\cite{meier2021language} performs zero-shot prediction of the effect of missense mutations by scoring sequences with a masked-language-model objective, demonstrating that evolutionary co-variation implicit in pre-training data captures functional constraints without explicit labels. ESM-2~\cite{lin2023evolutionary} scales this to 650M--15B parameters and achieves strong performance on DMS benchmarks such as ProteinGym~\cite{notin2023proteingym}.
 
 \paragraph{Protein function prediction.}
 DeepGOPlus~\cite{kulmanov2019deepgoplus} combines per-residue CNN features over sequences with a sequence-similarity transfer step, reporting mAP gains over sequence-similarity alone across all three GO aspects. TALE~\cite{cao2021tale} uses a Transformer with a joint sequence-label embedding that ties GO term representation to sequence features, improving annotation on sparsely annotated functions. DeepFRI~\cite{gligorijevic2021structure} constructs residue contact graphs from PDB structures and applies graph convolutional networks, showing that structure-derived topology captures functional relationships missed by sequence alone. DeepGraphGO~\cite{zhang2021deepgraphgo} aggregates protein-protein interaction (PPI) networks with sequence features through a GNN, demonstrating large-scale multispecies GO prediction.
@@ -59,46 +59,46 @@ Despite this progress, the two families address adjacent but not identical probl
 Compared with pure sequence models, structure-aware encoders can represent non-local residue couplings and interface geometry. Compared with direct GO classifiers, metric objectives are more flexible for ranking and retrieval-style analyses. ContVAR combines these two aspects by first injecting GO semantics in latent geometry (phase~0), then refining mutation separation in phase~1 with DMS triplets and local residue-level contrastive supervision.
 
 \subsection{Research gap}
-The missing component in many prior pipelines is a \emph{single training flow} that (a) starts from GO-semantic constraints, (b) operates on mutation-level triplets, and (c) explicitly supervises both whole-graph and mutation-site representations under memory-aware hard-negative mining. This gap motivates the ContVAR design.
+The missing component in many prior pipelines is a \emph{single training flow} that (a) starts from GO-semantic constraints, (b) operates on mutation-level triplets, and (c) explicitly supervises both whole-graph and mutation-site representations under memory-aware hard-negative mining~\cite{schroff2015facenet}. This gap motivates the ContVAR design.
 
 \section{Methodology}
 
 \subsection{Overall Framework}
-Figure~\ref{fig:pipeline} summarizes the full workflow from structure-derived residue graphs through encoder training (phases~0--1) to GO decoding and variant function-change inference.
+Figure~\ref{fig:pipeline} summarizes the ContVAR pipeline in three panels: the end-to-end data flow from structures to variant calls (A), the encoder layer stack with the supervision objectives of both training phases (B), and the per-aspect decoder used at variant inference time (C).
 
-\begin{figure}[!t]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figures/contvar_pipeline_architecture.drawio.pdf}
   \vspace{-3pt}
-  \caption{ContVAR end-to-end pipeline and model architecture.
-  \textbf{(A)}~Data sources, hybrid residue-graph construction, and training stages: phase~0 GO semantic triplet pretraining, phase~1 DMS contrastive specialization with streaming semi-hard mining, and stage~2 per-aspect GO decoding with variant-level inference.
-  \textbf{(B)}~Residual two-layer GATv2 encoder (\texttt{DeepProteinGAT}): edge-conditioned message passing, global mean-pooled and mutation-site local projection heads ($\mathbf{z}_g$, $\mathbf{z}_l \in \mathbb{R}^{256}$, $\ell_2$-normalized), and phase~1 joint $\mathcal{L}_g$--$\mathcal{L}_l$ objective.
-  \textbf{(C)}~Per-ontology \texttt{FFNDecoder} and function-change calls (LOSS / GAIN / NEUTRAL, \texttt{ContVAR\_fitness}) from variant embeddings and wild-type GOA annotations.}
+  \caption{ContVAR pipeline and model architecture.
+  \textbf{(A)}~End-to-end pipeline: AFDB (phase~0/decoder) and AF3 (phase~1 DMS) monomer structures together with frozen ESM-2 features build hybrid residue graphs ($\mathbf{x}_i \in \mathbb{R}^{1300}$, $\mathbf{e}_{ij} \in \mathbb{R}^{20}$, $k{=}16$ per neighbor type); the encoder is trained sequentially in two phases (phase~0 GO semantic triplets, phase~1 DMS contrastive with streaming semi-hard mining) and then frozen; protein-level embeddings $\mathbf{z} \in \mathbb{R}^{256}$ feed three per-aspect FFN decoders whose probabilities yield per-GO LOSS / GAIN / NEUTRAL calls and \texttt{ContVAR\_fitness}.
+  \textbf{(B)}~Encoder layer stack (\texttt{DeepProteinGAT}): node features $X \in \mathbb{R}^{N\times1300}$ and edge attributes $E \in \mathbb{R}^{|\mathcal{E}|\times20}$ are first projected by the \texttt{edge\_encoder} ($\mathbb{R}^{20}\!\to\!\mathbb{R}^{128}\!\to\!\mathbb{R}^{128}$); two residual edge-conditioned GATv2 layers (4 heads, $h{=}128$, 512-d node states, LayerNorm + ELU) produce $\mathbf{h}_i \in \mathbb{R}^{512}$ that branches into a global mean-pooled head and a mutation-site local head, each projecting to $\ell_2$-normalized $\mathbf{z}_g,\mathbf{z}_l \in \mathbb{R}^{256}$; phase~0 attaches three ontology heads (MF / BP / CC) trained with the semantic triplet loss $\mathcal{L}_{\text{GO}}$ ($m_{go}{=}0.2$), and phase~1 jointly minimizes the global triplet $\mathcal{L}_g$ and local pairwise contrastive $\mathcal{L}_l$ under streaming semi-hard mining, with $\mathcal{L}_{\text{total}}=(\mathcal{L}_g+\mathcal{L}_l)/2$.
+  \textbf{(C)}~Decoder and inference: \texttt{FFNDecoder} ($256\!\to\!512\!\to\!1024\!\to\!512\!\to\!|V_{\text{GO}}|$, BatchNorm / ReLU / Dropout) is trained per GO aspect with class-balanced multi-label BCE (\texttt{NULL\_FUNCTION} weighted by $\alpha{=}3$); at inference, $\sigma$-scored variant probabilities are joined with wild-type GO annotations from GOA, and per-term decisions ($\theta{=}0.1$) yield LOSS / GAIN / NEUTRAL plus the scalar \texttt{ContVAR\_fitness}.}
   \label{fig:pipeline}
 \end{figure}
 
 ContVAR is organized as two training stages that share a common protein identifier space:
 \begin{enumerate}
     \item \textbf{Mutation-aware graph encoder.} Training proceeds in two phases. \textbf{Phase~0} performs GO semantic-similarity triplet pretraining with ontology-specific heads (MF, BP, CC) on residue graphs. \textbf{Phase~1} specializes the same backbone on DMS protein-family triplets with a joint global graph-level and local mutation-site contrastive loss; streaming semi-hard negative mining is active from the first phase~1 epoch.
-    \item \textbf{Supervised GO decoder and variant function-change inference.} A feed-forward decoder (\texttt{FFNDecoder}) is trained on frozen encoder embeddings as a multi-label GO classifier under UniRef50 cluster-aware splits, separately for each GO aspect (MF, BP, CC). At inference, variant embeddings are scored and combined with curated wild-type (WT) GO annotations from GOA to produce per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
+    \item \textbf{Supervised GO decoder and variant function-change inference.} A feed-forward decoder (\texttt{FFNDecoder}) is trained on frozen encoder embeddings as a multi-label GO classifier under UniRef50 cluster-aware splits~\cite{suzek2015uniref}, separately for each GO aspect (MF, BP, CC). At inference, variant embeddings are scored and combined with curated wild-type (WT) GO annotations from GOA to produce per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
 \end{enumerate}
 Encoder and decoder use different supervision signals---DMS-driven contrastive geometry versus protein-level GO multi-label annotations---and are linked through a persisted encoder checkpoint and protein embeddings keyed by UniProt identifier.
 
 \subsection{Dataset Description}
-\textbf{GO (phase~0) track.} Phase~0 consumes residue graphs and ontology-specific semantic-similarity tables under the shared UniRef50-aware protein split, which contains 122,190 proteins (97,771 train, 12,093 validation, 12,326 test). Positives use similarity $\geq 0.8$; negatives use similarity $\leq 0.2$ and are sampled from low/mid bins ([0.0,0.1), [0.1,0.2]) for hardness balancing. 
+\textbf{GO (phase~0) track.} Phase~0 consumes residue graphs and ontology-specific semantic-similarity tables under the shared UniRef50-aware protein split~\cite{suzek2015uniref}, which contains 122,190 proteins (97,771 train, 12,093 validation, 12,326 test). Positives use similarity $\geq 0.8$; negatives use similarity $\leq 0.2$ and are sampled from low/mid bins ([0.0,0.1), [0.1,0.2]) for hardness balancing. 
 
 \textbf{DMS (phase~1) track.} The mutagenesis corpus is organized by protein family with one wild-type anchor, multiple positives, and multiple negatives per family. Starting from the ProteinGym Deep Mutational Scanning benchmark~\cite{notin2023proteingym}, we retained proteins with sequence length at most 656 residues, giving 97 unique proteins. When an assay annotated only a protein segment, the corresponding full-length sequence was reconstructed and variant coordinates were remapped to the full-length residue index so that the graph encoder always received complete protein context. For each protein, the positive pool was built from 50 neutral variants selected immediately above the assay cutoff indicating retained-functionality while the negative pool used the 50 lowest-fitness score variants as deleterious examples; selection was sequence-position stratified to reduce clustering in a single domain or local region. This produced exactly 9,700 curated variants before graph construction. The DMS split respects the UniRef50-aware protein split used for phase~0 and decoder training: if a DMS protein is present in that split, the wild type and all of its variants inherit the same train/validation/test assignment; DMS proteins absent from the UniRef50 split are conservatively assigned to training. The resulting fixed DMS split contains 97 families (93 train, 2 validation, 2 test), preventing variant-level leakage across held-out protein families. Raw structures are consumed as mmCIF/CIF files, and per-residue ESM-2 embeddings are loaded from a precomputed store keyed by normalized protein identifiers. Mutated residue positions are parsed from variant filenames during collation and mining.
 
-\textbf{GO annotation / decoder track.} The supervised decoder uses the same UniRef50-aware protein universe and train/validation/test assignment as phase~0, but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels, and one decoder is trained independently for each ontology. Thus, phase~0 and the decoder share the same protein split by identity, while differing in supervision format: phase~0 uses semantic-similarity triplets, whereas the decoder uses GO multi-hot label vectors.
+\textbf{GO annotation / decoder track.} The supervised decoder uses the same UniRef50-aware protein universe and train/validation/test assignment as phase~0, but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations~\cite{uniprot2023,geneontology2021} provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels, and one decoder is trained independently for each ontology. Thus, phase~0 and the decoder share the same protein split by identity, while differing in supervision format: phase~0 uses semantic-similarity triplets, whereas the decoder uses GO multi-hot label vectors.
 
 \textbf{GO function-change cohort.} Because no directly usable dataset links protein variants to GO-level loss- or gain-of-function effects, we constructed a curated cohort from UniProt Swiss-Prot \texttt{variant} and \texttt{mutagenesis} feature descriptions. The cohort converts free-text experimental descriptions into atomic variant--GO effect records with a signed effect label (LOSS or GAIN). After description filtering, GO matching, manual rule-based cleanup, and project-specific sequence-length filtering, the final cohort used in ContVAR contains 6,159 proteins, 17,442 variants, and 18,126 variant--GO term matches.
 
 \textbf{Structure interchange vs.\ cached graphs.} CIF/mmCIF is the portable format for atomic coordinates; serialized graph tensors cache parsing, featurization, and edge construction for reuse.
 
 \subsection{Dataset Preparation / Preprocessing}
-\textbf{Structure sources.} For the selected DMS wild-type and variant sequences, three-dimensional structures were generated with AlphaFold3. To reduce folding cost on the compute cluster, available assay/MSA resources were reused instead of regenerating alignments from scratch. For the larger GO protein set used in phase~0 and decoder embedding export, residue graphs were built from already available structures, primarily AlphaFold Database models when present and alternative structure resources otherwise. All structures are treated as fixed mmCIF/CIF inputs for graph construction.
+\textbf{Structure sources.} For the selected DMS wild-type and variant sequences, three-dimensional structures were generated with AlphaFold3~\cite{abramson2024alphafold3}. To reduce folding cost on the compute cluster, available assay/MSA resources were reused instead of regenerating alignments from scratch. For the larger GO protein set used in phase~0 and decoder embedding export, residue graphs were built from already available structures, primarily AlphaFold Database (AFDB) AlphaFold2 models~\cite{varadi2022afdb,jumper2021highly} when present and alternative structure resources otherwise. All structures are treated as fixed mmCIF/CIF inputs for graph construction. Because phase~0 and the decoder consume AFDB-derived graphs while phase~1 DMS training uses project AF3 predictions, we characterized DMS wild-type concordance between the two structure sources before training (Section~\ref{sec:wt-structure-concordance}).
 
-\textbf{From structures to residue graphs.} Per-residue $\mathrm{C}_\alpha$ coordinates and amino-acid identities are extracted from monomer structures and assembled into PyTorch Geometric graphs. Connectivity uses the hybrid edge scheme below; an optional pure $k$NN baseline (Graphein-style) is available for ablations.
+\textbf{From structures to residue graphs.} Per-residue $\mathrm{C}_\alpha$ coordinates and amino-acid identities are extracted from monomer structures and assembled into PyTorch Geometric graphs~\cite{fey2019pyg}. Connectivity uses the hybrid edge scheme below; an optional pure $k$NN baseline (Graphein-style~\cite{ramirez2022graphein}) is available for ablations.
 
 Node features concatenate a residue-identity one-hot and a per-residue ESM-2 embedding:
 \[
@@ -117,25 +117,92 @@ For GO term assignment, each remaining atomic description and all candidate GO t
 Localization records were finally converted into signed LOSS or GAIN labels according to directionality. For example, increased nuclear localization was treated as gain of the corresponding localization term, whereas decreased localization to the nucleus was treated as loss. We also corrected systematic embedding errors in which amino-acid or nucleic-acid specificity dominated the match incorrectly. Cases such as an alanine-related description matching a serine-specific GO term, or tRNA-related descriptions matching rRNA-specific terms, were detected rule-wise and replaced by the appropriate parent GO term (e.g.\ RNA acetylation rather than a mismatched RNA-species-specific child). Lastly, a small set of overly general GO terms that produced many high-similarity false matches, such as enzyme inhibitor activity, was identified during manual inspection and all of their matches were removed, eliminating approximately 1,000 records. For compatibility with SALAD~\cite{jendrusch2025salad} and downstream AlphaFold structure prediction, we retained only proteins with sequence length between 49 and 1,280 residues, yielding the final 6,159-protein, 17,442-variant, 18,126-match cohort.
 
 \subsubsection{Hybrid residue-graph connectivity}
+\label{sec:hybrid-graph}
 The same hybrid residue-graph construction is used for protein graphs across the encoder workflow, including GO semantic pretraining and DMS specialization. The design is motivated by the need to represent both local structural neighborhoods and non-local residue coupling: in the DMS setting, for example, variants can perturb local side-chain packing as well as distant contacts. A purely sequence-local chain graph under-represents 3D contacts; a fixed-radius spatial graph can miss compensatory long-range interactions; and a dense residue--residue graph is prohibitive for long chains. ContVAR therefore uses a \emph{fixed neighbor budget per residue} that mixes three complementary link types.
 
 Let $N$ be the number of residues in a chain, $\mathbf{r}_i\in\mathbb{R}^3$ the $\mathrm{C}_\alpha$ coordinate of residue $i$, and $s_i$ its sequence index. Pairwise Euclidean distances $d_{ij}=\|\mathbf{r}_i-\mathbf{r}_j\|_2$ and index distances $|s_i-s_j|$ are computed within the same chain (cross-chain links are masked). For each residue $i$, neighbors are selected in three sequential stages; edges already chosen in an earlier stage are excluded from later stages:
 \begin{enumerate}
     \item \textbf{Sequence-index neighbors} ($k_{\text{idx}}$, default 16): the $k_{\text{idx}}$ residues $j\neq i$ on the same chain with smallest $|s_i-s_j|$.
     \item \textbf{Spatial neighbors} ($k_{\text{sp}}$, default 16): among remaining candidates, the $k_{\text{sp}}$ residues with smallest $d_{ij}$.
-    \item \textbf{Stochastic long-range neighbors} ($k_{\text{rnd}}$, default 16): among remaining candidates, sample $k_{\text{rnd}}$ partners via a Gumbel top-$k$ trick. Unnormalized scores are $w_{ij}=-3\log(d_{ij}+\epsilon)$; independent Gumbel noise is added and the lowest perturbed scores are taken, biasing selection toward closer residues while retaining diversity (inverse-cube weighting in distance space).
+    \item \textbf{Stochastic long-range neighbors} ($k_{\text{rnd}}$, default 16): among remaining candidates, sample $k_{\text{rnd}}$ partners via a Gumbel top-$k$ trick~\cite{kool2019stochastic}. Unnormalized scores are $w_{ij}=-3\log(d_{ij}+\epsilon)$; independent Gumbel noise is added and the lowest perturbed scores are taken, biasing selection toward closer residues while retaining diversity (inverse-cube weighting in distance space).
 \end{enumerate}
 Directed edges $(i\to j)$ are created for every valid neighbor slot; invalid padding slots ($j=-1$) are dropped. Each edge carries a 20-dimensional attribute vector: (i) a 16-bin Gaussian radial basis expansion of $d_{ij}$ on $[0,d_{\max}]$ with $d_{\max}=22$\,\AA; (ii) a 3-way one-hot encoding of neighbor type (index / spatial / random); and (iii) one normalized sequence separation $|s_i-s_j|/N$. The GATv2 stack consumes these attributes through an edge MLP before attention (Section~\ref{sec:encoder-backbone}).
 
-This recipe is motivated by sparse-neighbor designs for structure modeling that combine chain-index, Euclidean nearest, and randomized long-range partners~\cite{jendrusch2025salad}; ContVAR adapts the connectivity pattern to residue-level message passing on AlphaFold-predicted monomers, with $k{=}16$ per neighbor type by default and on-disk graph caching when structures are revisited.
+This recipe is motivated by sparse-neighbor designs for structure modeling that combine chain-index, Euclidean nearest, and randomized long-range partners~\cite{jendrusch2025salad}; ContVAR adapts the connectivity pattern to residue-level message passing on AlphaFold2-predicted monomers~\cite{jumper2021highly}, with $k{=}16$ per neighbor type by default and on-disk graph caching when structures are revisited.
 
 \textbf{Mutation context.} The encoder always sees the full-chain graph; locality around the variant is enforced in the loss via the mutation-site branch rather than by cropping the graph to a fixed-radius neighborhood.
+
+\subsubsection{Structure-source concordance (AF3 vs.\ AFDB AF2)}
+\label{sec:wt-structure-concordance}
+Phase~0 and decoder training rely primarily on AFDB monomer models (AF2), whereas phase~1 DMS triplets use in-house AF3 wild-type and variant predictions. Before committing to this split, we audited whether mixed sources would systematically change the \emph{fixed} residue graphs fed to the encoder, or whether disagreement is dominated by intrinsically flexible targets irrespective of the predictor. This is a dataset-quality check, not a model-evaluation result.
+
+\paragraph{Global C$\alpha$ RMSD.}
+Table~\ref{tab:wt-graph-summary} summarizes pairwise C$\alpha$ RMSD after superposition from \texttt{rmsd/results/rmsd\_report.csv} ($n{=}90$ DMS wild-types with project AF3, AFDB AF2, and ColabFold AF2 rank-1 structures~\cite{mirdita2022colabfold}). Seven families are excluded because no AFDB model was available (P03466, P03470, P03704, P04610, P04618, P16117, P03034). Three comparisons are reported: AFDB vs.\ project AF3 (phase~0 vs.\ phase~1 source), AFDB vs.\ ColabFold AF2, and project AF3 vs.\ ColabFold AF2. Cohort medians are \textbf{6.0}, \textbf{5.0}, and \textbf{6.1~\AA}, respectively (means 9.9, 9.5, and 10.1~\AA). Compact folds remain at the low end (e.g.\ TPK1 Q9H3S4, 0.17~\AA\ across all three pairs; GFP P42212, 3.0~\AA\ AFDB--AF3). The long tail is shared across comparisons (SPG1 P06654: 63.0, 65.0, and 57.8~\AA), indicating that elevated displacement on flexible targets is not specific to the AF2$\rightarrow$AF3 switch.
+
+\paragraph{Cross-pipeline agreement at 7~\AA\ cutoff.}
+To classify targets by structural stability across all three structure sources, we binarized each comparison at 7~\AA\ RMSD (Table~\ref{tab:wt-rmsd-categories}). \textbf{47} proteins are low in all three pairs; \textbf{34} are high in all three; only \textbf{9} are mixed (five with one high and two low; four with two high and one low). The mixed set includes compact or moderately displaced folds near the threshold (e.g.\ MTHR P42898, OTC P00480) rather than hinge-dominated outliers. Proteins high across all three comparisons overlap strongly with the flexible tail above and with low deterministic graph Jaccard (Section~\ref{sec:wt-graph-overlap}).
+
+\paragraph{Within-predictor variability (spot checks).}
+Representative high-RMSD targets were additionally re-folded with AlphaFold Server (AF3) and ColabFold (custom MSA). On SPG1 (P06654), fresh AF3 and AFDB AF2 still differ by $\sim$56--66~\AA; within a single predictor, rank-1 vs.\ rank-2 models differ by $\sim$19~\AA\ (AlphaFold Server) and $\sim$33~\AA\ (ColabFold custom MSA). Low-RMSD proteins stay low across pipelines. ColabFold rank-1 vs.\ AFDB in \texttt{rmsd\_report.csv} therefore captures one AF2 reference point; full five-model AF2 ensemble spread remains \textit{[TBD]} for supplementary listing.
+
+\paragraph{Residue-graph overlap.}
+\label{sec:wt-graph-overlap}
+Structures alone do not determine encoder inputs: graphs use the hybrid SALAD connectivity above ($k{=}16$ per neighbor type). In a separate pass, we rebuilt graphs from AF3 and AFDB wild-type CIFs with the same code path as training (deterministic index/spatial neighbors; random neighbors with fixed seed 42) and compared edge sets by Jaccard overlap on residue-indexed pairs, together with Pearson correlation of per-residue degrees on shared indices ($n{=}90$ in \texttt{rmsd/af2\_af3\_wt\_graph\_compare.csv}, matching the RMSD audit).
+
+Across these 90 pairs, median Jaccard was \textbf{0.92} (all edges), \textbf{0.84} (spatial only), and \textbf{1.00} (sequence-index only); median degree-profile correlation was \textbf{0.96}. Global C$\alpha$ RMSD and graph overlap measure different aspects: many families show modest displacement in all three RMSD pairs while still sharing most SALAD edges, whereas the flexible tail is high in both metrics.
+
+Using deterministic overlap (index + spatial, excluding stochastic long-range links), 26 targets fell below 0.8 (Table~\ref{tab:wt-graph-summary}). On these 26 proteins, median AFDB--AF3 RMSD is \textbf{22.9~\AA}\ versus \textbf{2.8~\AA}\ for the other 64 ($n{=}90$); AFDB--ColabFold AF2 and AF3--ColabFold AF2 medians show the same split (18.9 and 20.9~\AA\ vs.\ 2.6 and 3.1~\AA). At the 7~\AA\ cutoff, 20 of 26 exceed the threshold in all three RMSD pairs, so low graph overlap and high structural displacement largely co-occur on the same flexible wild-types (e.g.\ YAP1, p53, CD19, SERT, $\alpha$-synuclein). Five audit-stable examples (P69222, P31969, O15245, P80324, P61991) remain below 7~\AA\ in all three comparisons (3.8--6.8~\AA\ AFDB--AF3) yet still show deterministic Jaccard $0.57$--$0.75$---modest graph agreement despite concordant global folds. For the remaining 64 families with deterministic Jaccard $\geq 0.8$, AF2/AF3 graph inputs are closely aligned; we therefore retain the phase~0 (AFDB) / phase~1 (AF3) structure split without changing edge construction.
+
+\noindent\footnotesize\textit{Low deterministic Jaccard ($<0.8$):} P51681, Q6GFB4, P40238, P04147, P38428, P05434, P69222, O22265, P31969, Q64337, Q13148, P54725, P37231, P04049, P15382, P06654, P15391, O15297, P04637, O15245, P80324, P37840, P61991, Q9LW00, P46937, P0AAN5.
+\normalsize
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{DMS wild-type structure-source concordance. RMSD from \texttt{rmsd/results/rmsd\_report.csv} ($n{=}90$); graph metrics from \texttt{rmsd/af2\_af3\_wt\_graph\_compare.csv} ($n{=}90$). Full DMS cohort: 97 families (seven excluded: no AFDB model).}
+\label{tab:wt-graph-summary}
+\begin{tabular}{lcc}
+\hline
+Quantity & Median & IQR (25--75\%) \\
+\hline
+C$\alpha$ RMSD AFDB vs.\ project AF3 & 6.0~\AA & 1.6--12.2~\AA \\
+C$\alpha$ RMSD AFDB vs.\ ColabFold AF2 (rank 1) & 5.0~\AA & 1.3--13.1~\AA \\
+C$\alpha$ RMSD project AF3 vs.\ ColabFold AF2 (rank 1) & 6.1~\AA & 1.6--13.6~\AA \\
+Edge Jaccard (all SALAD edges) & 0.92 & 0.87--0.96 \\
+Edge Jaccard (spatial neighbors) & 0.84 & 0.72--0.93 \\
+Edge Jaccard (index neighbors) & 1.00 & 1.00--1.00 \\
+Edge Jaccard (deterministic: index+spatial) & 0.90 & 0.77--0.96 \\
+Degree-profile Pearson (shared residues) & 0.96 & 0.91--0.99 \\
+Families with deterministic Jaccard $<0.8$ & \multicolumn{2}{c}{26 / 90} \\
+Families with spatial Jaccard $\geq 0.7$ & \multicolumn{2}{c}{60 / 90} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{DMS wild-type RMSD agreement categories at 7~\AA\ cutoff across all three pairwise comparisons in \texttt{rmsd\_report.csv} ($n{=}90$). ``High'' = RMSD $>7~\AA$; ``low'' = RMSD $\leq 7~\AA$.}
+\label{tab:wt-rmsd-categories}
+\begin{tabular}{lc}
+\hline
+Category & Count \\
+\hline
+All three low & 47 \\
+All three high & 34 \\
+One high, two low & 5 \\
+Two high, one low & 4 \\
+\hline
+\end{tabular}
+\end{table}
+
+\noindent Per-protein rows: \texttt{rmsd/results/rmsd\_report.csv} (RMSD); \texttt{rmsd/af2\_af3\_wt\_graph\_compare.csv} (graphs). \textit{[TBD:]} ColabFold rank-1 vs.\ rank-2 (five-model) ensemble spread for supplementary table.
 
 \subsection{Model/Architecture Design}
 
 \subsubsection{Mutation-Aware Graph Encoder (backbone)}
 \label{sec:encoder-backbone}
-The encoder is a residual two-layer GATv2 stack~\cite{brody2022how} with four attention heads per layer and hidden size 128. GATv2 is selected over standard GAT because the original GAT computes attention coefficients as a function of a linear combination of the concatenated source and target features, which Brody et al.~\cite{brody2022how} show collapses to a ranking over neighbors that is independent of the query node—making attention static. GATv2 remedies this by applying the non-linearity \emph{before} the attention projection so that each coefficient depends jointly on both the query and the key, yielding fully dynamic attention. In the context of irregular protein residue graphs, where the chemical environment around a mutation site varies substantially across different protein families and positions, this dynamic re-weighting is important: the encoder must learn to attend to non-local compensatory contacts whose relevance changes depending on which residue is mutated. Edge attributes are first projected by an MLP and injected into both GATv2 layers. Let $\mathbf{h}_i^{(l)}$ be node state at layer $l$; each layer applies attention-weighted aggregation with edge conditioning, layer normalization, and residual addition. Global embedding uses mean pooling followed by a projection head to 256 dimensions and $\ell_2$ normalization. A separate local projection head extracts the embedding at mutation position; if a residue index is absent, graph mean is used as fallback.
+The encoder is a residual two-layer GATv2 stack~\cite{brody2022how} with four attention heads per layer and hidden size 128. GATv2 is selected over standard GAT~\cite{velickovic2018gat} because the original GAT computes attention coefficients as a function of a linear combination of the concatenated source and target features, which Brody et al.~\cite{brody2022how} show collapses to a ranking over neighbors that is independent of the query node—making attention static. GATv2 remedies this by applying the non-linearity \emph{before} the attention projection so that each coefficient depends jointly on both the query and the key, yielding fully dynamic attention. In the context of irregular protein residue graphs, where the chemical environment around a mutation site varies substantially across different protein families and positions, this dynamic re-weighting is important: the encoder must learn to attend to non-local compensatory contacts whose relevance changes depending on which residue is mutated. Edge attributes are first projected by an MLP and injected into both GATv2 layers. Let $\mathbf{h}_i^{(l)}$ be node state at layer $l$; each layer applies attention-weighted aggregation with edge conditioning, layer normalization, and residual addition. Global embedding uses mean pooling followed by a projection head to 256 dimensions and $\ell_2$ normalization. A separate local projection head extracts the embedding at mutation position; if a residue index is absent, graph mean is used as fallback.
 
 \subsubsection{Phase 0: GO semantic pretraining}
 Phase~0 provides biologically informed initialization by training ontology-specific triplets (MF/BP/CC) using ontology heads on top of the shared encoder. For each ontology $o$:
@@ -146,7 +213,7 @@ with default $m_{go}=0.2$. Active ontology losses are averaged per step. Optiona
 
 \subsubsection{Phase 1: DMS encoder training (global triplet + local contrastive loss)}
 \label{sec:phase1-dms}
-After phase~0, phase~1 loads DMS protein-family triplets under the UniRef50-respecting fixed split described above (97 families: 93 train, 2 validation, 2 test) and initializes weights from the phase~0 checkpoint. Phase~1 uses streaming semi-hard negative mining from the first training epoch: each epoch reshuffles protein families, samples positives, scans candidate negatives in chunks, and rebuilds mined batches online. Exhaustive positive$\times$negative enumeration is reserved for validation and test.
+After phase~0, phase~1 loads DMS protein-family triplets under the UniRef50-respecting fixed split described above (97 families: 93 train, 2 validation, 2 test) and initializes weights from the phase~0 checkpoint. Phase~1 uses streaming semi-hard negative mining~\cite{schroff2015facenet} from the first training epoch: each epoch reshuffles protein families, samples positives, scans candidate negatives in chunks, and rebuilds mined batches online. Exhaustive positive$\times$negative enumeration is reserved for validation and test.
 
 \paragraph{Per-batch mining and forward pass.}
 Families are shuffled and grouped into mining batches. Gradients are accumulated over four mined batches before each optimizer update. For each batch:
@@ -182,7 +249,7 @@ Phase~1 training runs for 200 epochs by default. Optimizer: AdamW (learning rate
 The decoder consumes protein-level embeddings from the trained encoder (256 dimensions) or, in ablations, raw ESM-2 embeddings (1{,}280 dimensions) or their concatenation (1{,}536 dimensions). It outputs multi-label GO probabilities under Molecular Function (MF), Biological Process (BP), and Cellular Component (CC). One decoder is trained independently per aspect.
 
 \paragraph{GO annotation source and vocabulary.}
-Labels are taken from UniProt-GOA Swiss-Prot, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten training proteins. A dedicated \texttt{NULL\_FUNCTION} class is appended to flag predicted complete loss of function.
+Labels are taken from UniProt-GOA Swiss-Prot~\cite{uniprot2023,geneontology2021}, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten training proteins. A dedicated \texttt{NULL\_FUNCTION} class is appended to flag predicted complete loss of function.
 
 \paragraph{Dataset and UniRef50-aware splits.}
 Training proteins are partitioned by UniRef50 cluster so that no cluster appears in more than one of train, validation, or test. This same protein-level partition is used by phase~0 and by all three decoder aspects, and the DMS family split inherits it where the DMS protein is present in the UniRef50 mapping. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
@@ -227,7 +294,7 @@ Variant embeddings are scored in batch; wild-type accessions and mutation tokens
 \label{sec:hf-space}
 To make ContVAR accessible beyond offline batch execution, we also provide an interactive Hugging Face Space for structure-level inference. The Space exposes two user workflows. In the single-protein workflow, users upload one PDB or CIF structure and receive ranked GO predictions across MF, BP, and CC. In the WT-versus-variant workflow, users upload matched wild-type and variant structures and receive WT score, variant score, score difference, and a derived gained/lost/stable status for the highest-changing GO terms. Results are displayed as aspect-specific tables and summary panels, with downloadable prediction files for downstream inspection.
 
-The Space runs the same graph-based inference path used by the project: it parses uploaded structures, extracts the amino-acid sequence and residue coordinates, computes ESM-2 residue embeddings on the fly, constructs the hybrid residue graph, applies the trained ContVAR encoder, and decodes GO scores with the per-aspect FFN decoders. The public interface is intended as a lightweight demonstration and inspection layer rather than a replacement for large-scale batch scoring. We also added a clinical-context panel: when a submitted protein or mapped variant has a ClinVar record, available clinical information will be shown alongside the GO prediction results in a separate boxed summary.
+The Space runs the same graph-based inference path used by the project: it parses uploaded structures, extracts the amino-acid sequence and residue coordinates, computes ESM-2 residue embeddings on the fly, constructs the hybrid residue graph, applies the trained ContVAR encoder, and decodes GO scores with the per-aspect FFN decoders. The public interface is intended as a lightweight demonstration and inspection layer rather than a replacement for large-scale batch scoring. We also added a clinical-context panel: when a submitted protein or mapped variant has a ClinVar record~\cite{landrum2018clinvar}, available clinical information will be shown alongside the GO prediction results in a separate boxed summary.
 
 \subsection{Evaluation Metrics}
 
@@ -398,7 +465,7 @@ ESM-2 ContVAR  & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \end{table}
 
 \subsection{Additional ablations and analyses}
-\textit{[Placeholder.]} Beyond Table~\ref{tab:decoder-ablation}, planned encoder-side ablations include hybrid vs.\ $k$NN edges, GO-pretrained vs.\ random-init encoder before phase~1, global-only vs.\ local-only vs.\ joint $\mathcal{L}_g+\mathcal{L}_l$, and mining strategy. Decoder-side threshold sweeps around 0.95 and \texttt{NULL\_FUNCTION} loss weighting remain optional sensitivity analyses.
+Beyond Table~\ref{tab:decoder-ablation}, planned encoder-side ablations include hybrid vs.\ $k$NN edges, GO-pretrained vs.\ random-init encoder before phase~1, global-only vs.\ local-only vs.\ joint $\mathcal{L}_g+\mathcal{L}_l$, and mining strategy. Decoder-side threshold sweeps around 0.95 and \texttt{NULL\_FUNCTION} loss weighting remain optional sensitivity analyses.
 
 \subsection{Qualitative or case studies}
 \textit{[Placeholder.]} Suggested case-study outputs available in project tooling:
@@ -411,7 +478,7 @@ ESM-2 ContVAR  & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
 \section{Conclusion and Future Work}
 
 \subsection{Conclusion}
-Accurate, mechanistically informative variant interpretation requires models that respect both molecular structure and large-scale functional assays, and that translate the resulting representations back into the ontology-level vocabulary that biologists actually use. ContVAR addresses both halves of this requirement with a two-stage pipeline: (i) a residual GATv2 encoder over ESM-augmented residue graphs, trained with GO semantic-similarity triplet pretraining (phase~0) across MF/BP/CC followed by phase~1 DMS specialization with a joint global triplet plus mutation-local contrastive loss under streaming semi-hard mining; and (ii) three per-aspect feed-forward decoders, trained with class-balanced multi-label BCE (including a dedicated \texttt{NULL\_FUNCTION} class) under a UniRef50 cluster-aware split, that turn variant embeddings into per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
+Accurate, mechanistically informative variant interpretation requires models that respect both molecular structure and large-scale functional assays, and that translate the resulting representations back into the ontology-level vocabulary that biologists actually use. ContVAR addresses both halves of this requirement with a two-stage pipeline: (i) a residual GATv2 encoder over ESM-augmented residue graphs, trained with GO semantic-similarity triplet pretraining (phase~0) across MF/BP/CC followed by phase~1 DMS specialization with a joint global triplet plus mutation-local contrastive loss under streaming semi-hard mining~\cite{schroff2015facenet}; and (ii) three per-aspect feed-forward decoders, trained with class-balanced multi-label BCE (including a dedicated \texttt{NULL\_FUNCTION} class) under a UniRef50 cluster-aware split~\cite{suzek2015uniref}, that turn variant embeddings into per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
 
 \subsection{Future Work}
 \textit{[Placeholder.]}
