@@ -137,17 +137,17 @@ This recipe is motivated by sparse-neighbor designs for structure modeling that 
 Phase~0 and decoder training rely primarily on AFDB monomer models (AF2), whereas phase~1 DMS triplets use in-house AF3 wild-type and variant predictions. Before committing to this split, we audited whether mixed sources would systematically change the \emph{fixed} residue graphs fed to the encoder, or whether disagreement is dominated by intrinsically flexible targets irrespective of the predictor. This is a dataset-quality check, not a model-evaluation result.
 
 \paragraph{Global C$\alpha$ RMSD.}
-Table~\ref{tab:wt-graph-summary} summarizes pairwise C$\alpha$ RMSD after superposition from \texttt{rmsd/results/rmsd\_report.csv} ($n{=}90$ DMS wild-types with project AF3, AFDB AF2, and ColabFold AF2 rank-1 structures~\cite{mirdita2022colabfold}). Seven families are excluded because no AFDB model was available (P03466, P03470, P03704, P04610, P04618, P16117, P03034). Three comparisons are reported: AFDB vs.\ project AF3 (phase~0 vs.\ phase~1 source), AFDB vs.\ ColabFold AF2, and project AF3 vs.\ ColabFold AF2. Cohort medians are \textbf{6.0}, \textbf{5.0}, and \textbf{6.1~\AA}, respectively (means 9.9, 9.5, and 10.1~\AA). Compact folds remain at the low end (e.g.\ TPK1 Q9H3S4, 0.17~\AA\ across all three pairs; GFP P42212, 3.0~\AA\ AFDB--AF3). The long tail is shared across comparisons (SPG1 P06654: 63.0, 65.0, and 57.8~\AA), indicating that elevated displacement on flexible targets is not specific to the AF2$\rightarrow$AF3 switch.
+Table~\ref{tab:wt-graph-summary} summarizes pairwise C$\alpha$ RMSD after superposition for $n{=}90$ DMS wild-types with in-house AF3, AFDB AF2, and ColabFold AF2 rank-1 structures~\cite{mirdita2022colabfold}. Seven families are excluded because no AFDB model was available (P03466, P03470, P03704, P04610, P04618, P16117, P03034). Three comparisons are reported: AFDB vs.\ project AF3 (phase~0 vs.\ phase~1 source), AFDB vs.\ ColabFold AF2, and project AF3 vs.\ ColabFold AF2. Cohort medians are \textbf{6.0}, \textbf{5.0}, and \textbf{6.1~\AA}, respectively (means 9.9, 9.5, and 10.1~\AA). Compact folds remain at the low end (e.g.\ TPK1 Q9H3S4, 0.17~\AA\ across all three pairs; GFP P42212, 3.0~\AA\ AFDB--AF3). The long tail is shared across comparisons (SPG1 P06654: 63.0, 65.0, and 57.8~\AA), indicating that elevated displacement on flexible targets is not specific to the AF2$\rightarrow$AF3 switch.
 
 \paragraph{Cross-pipeline agreement at 7~\AA\ cutoff.}
 To classify targets by structural stability across all three structure sources, we binarized each comparison at 7~\AA\ RMSD (Table~\ref{tab:wt-rmsd-categories}). \textbf{47} proteins are low in all three pairs; \textbf{34} are high in all three; only \textbf{9} are mixed (five with one high and two low; four with two high and one low). The mixed set includes compact or moderately displaced folds near the threshold (e.g.\ MTHR P42898, OTC P00480) rather than hinge-dominated outliers. Proteins high across all three comparisons overlap strongly with the flexible tail above and with low deterministic graph Jaccard (Section~\ref{sec:wt-graph-overlap}).
 
 \paragraph{Within-predictor variability (spot checks).}
-Representative high-RMSD targets were additionally re-folded with AlphaFold Server (AF3) and ColabFold (custom MSA). On SPG1 (P06654), fresh AF3 and AFDB AF2 still differ by $\sim$56--66~\AA; within a single predictor, rank-1 vs.\ rank-2 models differ by $\sim$19~\AA\ (AlphaFold Server) and $\sim$33~\AA\ (ColabFold custom MSA). Low-RMSD proteins stay low across pipelines. ColabFold rank-1 vs.\ AFDB in \texttt{rmsd\_report.csv} therefore captures one AF2 reference point; full five-model AF2 ensemble spread remains \textit{[TBD]} for supplementary listing.
+Representative high-RMSD targets were additionally re-folded with AlphaFold Server (AF3) and ColabFold (custom MSA). On SPG1 (P06654), fresh AF3 and AFDB AF2 still differ by $\sim$56--66~\AA; within a single predictor, rank-1 vs.\ rank-2 models differ by $\sim$19~\AA\ (AlphaFold Server) and $\sim$33~\AA\ (ColabFold custom MSA). Low-RMSD proteins stay low across pipelines. ColabFold rank-1 vs.\ AFDB AF2 in the same audit therefore captures one AF2 reference point.
 
 \paragraph{Residue-graph overlap.}
 \label{sec:wt-graph-overlap}
-Structures alone do not determine encoder inputs: graphs use the hybrid SALAD connectivity above ($k{=}16$ per neighbor type). In a separate pass, we rebuilt graphs from AF3 and AFDB wild-type CIFs with the same code path as training (deterministic index/spatial neighbors; random neighbors with fixed seed 42) and compared edge sets by Jaccard overlap on residue-indexed pairs, together with Pearson correlation of per-residue degrees on shared indices ($n{=}90$ in \texttt{rmsd/af2\_af3\_wt\_graph\_compare.csv}, matching the RMSD audit).
+Structures alone do not determine encoder inputs: graphs use the hybrid SALAD connectivity above ($k{=}16$ per neighbor type). In a separate pass, we rebuilt graphs from AF3 and AFDB wild-type CIFs with the same code path as training (deterministic index/spatial neighbors; random neighbors with fixed seed 42) and compared edge sets by Jaccard overlap on residue-indexed pairs, together with Pearson correlation of per-residue degrees on shared indices ($n{=}90$, matching the RMSD audit cohort).
 
 Across these 90 pairs, median Jaccard was \textbf{0.92} (all edges), \textbf{0.84} (spatial only), and \textbf{1.00} (sequence-index only); median degree-profile correlation was \textbf{0.96}. Global C$\alpha$ RMSD and graph overlap measure different aspects: many families show modest displacement in all three RMSD pairs while still sharing most SALAD edges, whereas the flexible tail is high in both metrics.
 
@@ -159,7 +159,7 @@ Using deterministic overlap (index + spatial, excluding stochastic long-range li
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{DMS wild-type structure-source concordance. RMSD from \texttt{rmsd/results/rmsd\_report.csv} ($n{=}90$); graph metrics from \texttt{rmsd/af2\_af3\_wt\_graph\_compare.csv} ($n{=}90$). Full DMS cohort: 97 families (seven excluded: no AFDB model).}
+\caption{DMS wild-type structure-source concordance. Pairwise C$\alpha$ RMSD and residue-graph overlap metrics ($n{=}90$ wild-types). Full DMS cohort: 97 families (seven excluded: no AFDB model).}
 \label{tab:wt-graph-summary}
 \begin{tabular}{lcc}
 \hline
@@ -182,7 +182,7 @@ Families with spatial Jaccard $\geq 0.7$ & \multicolumn{2}{c}{60 / 90} \\
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{DMS wild-type RMSD agreement categories at 7~\AA\ cutoff across all three pairwise comparisons in \texttt{rmsd\_report.csv} ($n{=}90$). ``High'' = RMSD $>7~\AA$; ``low'' = RMSD $\leq 7~\AA$.}
+\caption{DMS wild-type RMSD agreement categories at 7~\AA\ cutoff across all three pairwise RMSD comparisons ($n{=}90$). ``High'' = RMSD $>7~\AA$; ``low'' = RMSD $\leq 7~\AA$.}
 \label{tab:wt-rmsd-categories}
 \begin{tabular}{lc}
 \hline
@@ -195,8 +195,6 @@ Two high, one low & 4 \\
 \hline
 \end{tabular}
 \end{table}
-
-\noindent Per-protein rows: \texttt{rmsd/results/rmsd\_report.csv} (RMSD); \texttt{rmsd/af2\_af3\_wt\_graph\_compare.csv} (graphs). \textit{[TBD:]} ColabFold rank-1 vs.\ rank-2 (five-model) ensemble spread for supplementary table.
 
 \subsection{Model/Architecture Design}
 
