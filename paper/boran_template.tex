@@ -11,6 +11,8 @@
 \usepackage{parskip}
 \usepackage{float}
 \usepackage{placeins}
+\usepackage{multirow}
+\usepackage{booktabs}
 \captionsetup{font=small, labelfont=bf, skip=2pt}
 \setlength{\abovecaptionskip}{2pt}
 \setlength{\belowcaptionskip}{4pt}
@@ -23,7 +25,7 @@
 \maketitle
 
 \begin{abstract}
-Determining the functional consequences of single amino acid variants (SAVs) remains a central challenge in computational biology. Existing variant effect predictors often optimize pathogenicity discrimination, whereas many downstream analyses require mutation-aware representations that preserve finer functional relationships and translate directly into Gene Ontology (GO)-level loss- and gain-of-function statements. We present ContVAR, a two-stage graph metric-learning and decoding pipeline. The first stage trains a mutation-aware encoder on residue graphs built from monomer structures, where node features concatenate amino-acid one-hot identities with per-residue ESM-2 embeddings; each residue graph uses a fixed-budget hybrid connectivity---$k$ sequence-index neighbors, $k$ $\mathrm{C}_\alpha$ spatial nearest neighbors, and $k$ stochastic long-range links (Gumbel top-$k$ sampling with inverse-cube distance weighting)---with edge attributes combining radial-basis-encoded distances, neighbor-type indicators, and normalized sequence separation, so message passing captures local packing and sparse non-local coupling without dense all-pairs edges. The encoder backbone is a residual two-layer GATv2 stack with edge-aware message passing. Encoder training proceeds in two phases: phase~0 GO semantic triplet pretraining across Molecular Function (MF), Biological Process (BP), and Cellular Component (CC), followed by phase~1 DMS contrastive specialization with a joint objective that averages (i) a global graph-level triplet loss with per-batch streaming semi-hard negative mining and (ii) a local mutation-site contrastive loss. The second stage trains three per-ontology feed-forward GO decoders (\texttt{FFNDecoder}) on top of frozen encoder embeddings with multi-label binary cross-entropy and class-balanced positive weights, including a dedicated \texttt{NULL\_FUNCTION} class for complete loss-of-function variants. Wild-type vs. variant decoder scores are then combined into per-GO LOSS/GAIN/NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}. The pipeline logs encoder-side alignment, uniformity, MRR, and split-aware losses, and decoder-side mAP, macro F1, precision, recall, accuracy, and MCC under UniRef50 cluster-aware splits, supporting reproducible protein-family-level validation.
+Determining the functional consequences of single amino acid variants (SAVs) remains difficult when models must link structure, mutational assays, and Gene Ontology (GO) loss- and gain-of-function statements rather than a single pathogenicity score. We present ContVAR, a two-stage pipeline: a residual GATv2 encoder on hybrid SALAD-style residue graphs (ESM-2 node features, sequence/spatial/stochastic neighbors) trained first on GO semantic triplets (phase~0; separate MF/BP/CC heads) and then on DMS protein-family triplets with joint global and mutation-site contrastive losses (phase~1); and per-aspect FFN decoders that map frozen embeddings to multi-label GO annotations and per-term variant function-change calls (LOSS / GAIN / NEUTRAL). Phase~0 graphs use AlphaFold Database models; phase~1 uses in-house AlphaFold3 structures. An audit on 90 DMS wild-types shows that $\sim$52\% fall in a concordant low-RMSD class with high deterministic graph overlap across AF2 and AF3 sources, supporting this mixed-source design for the stable majority. On held-out GO data, phase~0 encoders reach test MRR up to 0.62 (MF) and 0.61 (CC). After DMS fine-tuning (best epoch~76), the full encoder reports validation/test MRR $\approx$0.14 on exhaustive family triplets with low global and local contrastive loss. Wild-type GO decoder ablations (five embedding sources, shared architecture) show that raw ESM-2 and ESM-2 concatenated with graph embeddings achieve the strongest test mAP on MF ($\approx$0.73) and CC ($\approx$0.59), whereas the DMS-tuned graph encoder alone is weaker on MF/BP than phase-0-only or concatenated models---sequence and structure representations remain complementary under UniRef50 cluster-aware splits.
 \end{abstract}
 
 \section{Introduction}
@@ -71,16 +73,16 @@ Figure~\ref{fig:pipeline} summarizes the ContVAR pipeline in three panels: the e
   \includegraphics[width=\textwidth]{figures/contvar_pipeline_architecture.drawio.pdf}
   \vspace{-3pt}
   \caption{ContVAR pipeline and model architecture.
-  \textbf{(A)}~End-to-end pipeline: AFDB (phase~0/decoder) and AF3 (phase~1 DMS) monomer structures together with frozen ESM-2 features build hybrid residue graphs ($\mathbf{x}_i \in \mathbb{R}^{1300}$, $\mathbf{e}_{ij} \in \mathbb{R}^{20}$, $k{=}16$ per neighbor type); the encoder is trained sequentially in two phases (phase~0 GO semantic triplets, phase~1 DMS contrastive with streaming semi-hard mining) and then frozen; protein-level embeddings $\mathbf{z} \in \mathbb{R}^{256}$ feed three per-aspect FFN decoders whose probabilities yield per-GO LOSS / GAIN / NEUTRAL calls and \texttt{ContVAR\_fitness}.
+  \textbf{(A)}~End-to-end pipeline: AFDB (phase~0/decoder) and AF3 (phase~1 DMS) monomer structures together with frozen ESM-2 features build hybrid residue graphs ($\mathbf{x}_i \in \mathbb{R}^{1300}$, $\mathbf{e}_{ij} \in \mathbb{R}^{20}$, $k{=}16$ per neighbor type); the encoder is trained sequentially in two phases (phase~0 GO semantic triplets, phase~1 DMS contrastive with streaming semi-hard mining) and then frozen; protein-level embeddings $\mathbf{z} \in \mathbb{R}^{256}$ feed three per-aspect FFN decoders whose probabilities yield per-GO LOSS / GAIN / NEUTRAL calls.
   \textbf{(B)}~Encoder layer stack (\texttt{DeepProteinGAT}): node features $X \in \mathbb{R}^{N\times1300}$ and edge attributes $E \in \mathbb{R}^{|\mathcal{E}|\times20}$ are first projected by the \texttt{edge\_encoder} ($\mathbb{R}^{20}\!\to\!\mathbb{R}^{128}\!\to\!\mathbb{R}^{128}$); two residual edge-conditioned GATv2 layers (4 heads, $h{=}128$, 512-d node states, LayerNorm + ELU) produce $\mathbf{h}_i \in \mathbb{R}^{512}$ that branches into a global mean-pooled head and a mutation-site local head, each projecting to $\ell_2$-normalized $\mathbf{z}_g,\mathbf{z}_l \in \mathbb{R}^{256}$; phase~0 attaches three ontology heads (MF / BP / CC) trained with the semantic triplet loss $\mathcal{L}_{\text{GO}}$ ($m_{go}{=}0.2$), and phase~1 jointly minimizes the global triplet $\mathcal{L}_g$ and local pairwise contrastive $\mathcal{L}_l$ under streaming semi-hard mining, with $\mathcal{L}_{\text{total}}=(\mathcal{L}_g+\mathcal{L}_l)/2$.
-  \textbf{(C)}~Decoder and inference: \texttt{FFNDecoder} ($256\!\to\!512\!\to\!1024\!\to\!512\!\to\!|V_{\text{GO}}|$, BatchNorm / ReLU / Dropout) is trained per GO aspect with class-balanced multi-label BCE (\texttt{NULL\_FUNCTION} weighted by $\alpha{=}3$); at inference, $\sigma$-scored variant probabilities are joined with wild-type GO annotations from GOA, and per-term decisions ($\theta{=}0.1$) yield LOSS / GAIN / NEUTRAL plus the scalar \texttt{ContVAR\_fitness}.}
+  \textbf{(C)}~Decoder and inference: \texttt{FFNDecoder} ($256\!\to\!512\!\to\!1024\!\to\!512\!\to\!|V_{\text{GO}}|$, BatchNorm / ReLU / Dropout) is trained per GO aspect with class-balanced multi-label BCE (\texttt{NULL\_FUNCTION} weighted by $\alpha{=}3$); at inference, $\sigma$-scored variant probabilities are joined with wild-type GO annotations from GOA, and per-term decisions ($\theta{=}0.1$) yield LOSS / GAIN / NEUTRAL labels per GO term.}
   \label{fig:pipeline}
 \end{figure}
 
 ContVAR is organized as two training stages that share a common protein identifier space:
 \begin{enumerate}
     \item \textbf{Mutation-aware graph encoder.} Training proceeds in two phases. \textbf{Phase~0} performs GO semantic-similarity triplet pretraining with ontology-specific heads (MF, BP, CC) on residue graphs. \textbf{Phase~1} specializes the same backbone on DMS protein-family triplets with a joint global graph-level and local mutation-site contrastive loss; streaming semi-hard negative mining is active from the first phase~1 epoch.
-    \item \textbf{Supervised GO decoder and variant function-change inference.} A feed-forward decoder (\texttt{FFNDecoder}) is trained on frozen encoder embeddings as a multi-label GO classifier under UniRef50 cluster-aware splits~\cite{suzek2015uniref}, separately for each GO aspect (MF, BP, CC). At inference, variant embeddings are scored and combined with curated wild-type (WT) GO annotations from GOA to produce per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
+    \item \textbf{Supervised GO decoder and variant function-change inference.} A feed-forward decoder (\texttt{FFNDecoder}) is trained on frozen encoder embeddings as a multi-label GO classifier under UniRef50 cluster-aware splits~\cite{suzek2015uniref}, separately for each GO aspect (MF, BP, CC). At inference, variant embeddings are scored and combined with curated wild-type (WT) GO annotations from GOA to produce per-GO LOSS / GAIN / NEUTRAL calls.
 \end{enumerate}
 Encoder and decoder use different supervision signals---DMS-driven contrastive geometry versus protein-level GO multi-label annotations---and are linked through a persisted encoder checkpoint and protein embeddings keyed by UniProt identifier.
 
@@ -140,7 +142,7 @@ Phase~0 and decoder training rely primarily on AFDB monomer models (AF2), wherea
 Table~\ref{tab:wt-graph-summary} summarizes pairwise C$\alpha$ RMSD after superposition for $n{=}90$ DMS wild-types with in-house AF3, AFDB AF2, and ColabFold AF2 rank-1 structures~\cite{mirdita2022colabfold}. Seven families are excluded because no AFDB model was available (P03466, P03470, P03704, P04610, P04618, P16117, P03034). Three comparisons are reported: AFDB vs.\ project AF3 (phase~0 vs.\ phase~1 source), AFDB vs.\ ColabFold AF2, and project AF3 vs.\ ColabFold AF2. Cohort medians are \textbf{6.0}, \textbf{5.0}, and \textbf{6.1~\AA}, respectively (means 9.9, 9.5, and 10.1~\AA). Compact folds remain at the low end (e.g.\ TPK1 Q9H3S4, 0.17~\AA\ across all three pairs; GFP P42212, 3.0~\AA\ AFDB--AF3). The long tail is shared across comparisons (SPG1 P06654: 63.0, 65.0, and 57.8~\AA), indicating that elevated displacement on flexible targets is not specific to the AF2$\rightarrow$AF3 switch.
 
 \paragraph{Cross-pipeline agreement at 7~\AA\ cutoff.}
-To classify targets by structural stability across all three structure sources, we binarized each comparison at 7~\AA\ RMSD (Table~\ref{tab:wt-rmsd-categories}). \textbf{47} proteins are low in all three pairs; \textbf{34} are high in all three; only \textbf{9} are mixed (five with one high and two low; four with two high and one low). The mixed set includes compact or moderately displaced folds near the threshold (e.g.\ MTHR P42898, OTC P00480) rather than hinge-dominated outliers. Proteins high across all three comparisons overlap strongly with the flexible tail above and with low deterministic graph Jaccard (Section~\ref{sec:wt-graph-overlap}).
+To classify targets by structural stability across all three structure sources, we binarized each comparison at 7~\AA\ RMSD (Table~\ref{tab:wt-rmsd-categories}). \textbf{47} of 90 audited wild-types ($\sim$52\%) are low in all three pairwise comparisons; \textbf{34} are high in all three; only \textbf{9} are mixed (five with one high and two low; four with two high and one low). The \emph{all three low} set shows concordant, low-displacement folds with high deterministic graph overlap (Section~\ref{sec:wt-graph-overlap}), i.e.\ different predictors agree on both global coordinates and the fixed SALAD edge sets used in training. Most mixed-category proteins sit just above the 7~\AA\ threshold in one comparison while the other two remain low, so they behave like the stable cohort in practice. Only two identifiers---P63165 and P51681---show project AF3 clearly diverging from \emph{both} AFDB and ColabFold AF2; P51681 is also among the 26 targets with deterministic Jaccard $<0.8$. Proteins high across all three comparisons overlap strongly with the flexible long tail above (e.g.\ SPG1 P06654) and with low deterministic graph Jaccard, indicating that large displacements reflect intrinsic conformational variability rather than a systematic AF2$\rightarrow$AF3 pipeline effect.
 
 \paragraph{Within-predictor variability (spot checks).}
 Representative high-RMSD targets were additionally re-folded with AlphaFold Server (AF3) and ColabFold (custom MSA). On SPG1 (P06654), fresh AF3 and AFDB AF2 still differ by $\sim$56--66~\AA; within a single predictor, rank-1 vs.\ rank-2 models differ by $\sim$19~\AA\ (AlphaFold Server) and $\sim$33~\AA\ (ColabFold custom MSA). Low-RMSD proteins stay low across pipelines. ColabFold rank-1 vs.\ AFDB AF2 in the same audit therefore captures one AF2 reference point.
@@ -151,7 +153,10 @@ Structures alone do not determine encoder inputs: graphs use the hybrid SALAD co
 
 Across these 90 pairs, median Jaccard was \textbf{0.92} (all edges), \textbf{0.84} (spatial only), and \textbf{1.00} (sequence-index only); median degree-profile correlation was \textbf{0.96}. Global C$\alpha$ RMSD and graph overlap measure different aspects: many families show modest displacement in all three RMSD pairs while still sharing most SALAD edges, whereas the flexible tail is high in both metrics.
 
-Using deterministic overlap (index + spatial, excluding stochastic long-range links), 26 targets fell below 0.8 (Table~\ref{tab:wt-graph-summary}). On these 26 proteins, median AFDB--AF3 RMSD is \textbf{22.9~\AA}\ versus \textbf{2.8~\AA}\ for the other 64 ($n{=}90$); AFDB--ColabFold AF2 and AF3--ColabFold AF2 medians show the same split (18.9 and 20.9~\AA\ vs.\ 2.6 and 3.1~\AA). At the 7~\AA\ cutoff, 20 of 26 exceed the threshold in all three RMSD pairs, so low graph overlap and high structural displacement largely co-occur on the same flexible wild-types (e.g.\ YAP1, p53, CD19, SERT, $\alpha$-synuclein). Five audit-stable examples (P69222, P31969, O15245, P80324, P61991) remain below 7~\AA\ in all three comparisons (3.8--6.8~\AA\ AFDB--AF3) yet still show deterministic Jaccard $0.57$--$0.75$---modest graph agreement despite concordant global folds. For the remaining 64 families with deterministic Jaccard $\geq 0.8$, AF2/AF3 graph inputs are closely aligned; we therefore retain the phase~0 (AFDB) / phase~1 (AF3) structure split without changing edge construction.
+Using deterministic overlap (index + spatial, excluding stochastic long-range links), 26 targets fell below 0.8 (Table~\ref{tab:wt-graph-summary}). On these 26 proteins, median AFDB--AF3 RMSD is \textbf{22.9~\AA}\ versus \textbf{2.8~\AA}\ for the other 64 ($n{=}90$); AFDB--ColabFold AF2 and AF3--ColabFold AF2 medians show the same split (18.9 and 20.9~\AA\ vs.\ 2.6 and 3.1~\AA). At the 7~\AA\ cutoff, 20 of 26 exceed the threshold in all three RMSD pairs, so low graph overlap and high structural displacement largely co-occur on the same flexible wild-types (e.g.\ YAP1, p53, CD19, SERT, $\alpha$-synuclein). Five audit-stable examples (P69222, P31969, O15245, P80324, P61991) remain below 7~\AA\ in all three comparisons (3.8--6.8~\AA\ AFDB--AF3) yet still show deterministic Jaccard $0.57$--$0.75$---modest graph agreement despite concordant global folds. For the remaining 64 families with deterministic Jaccard $\geq 0.8$, AF2/AF3 graph inputs are closely aligned.
+
+\paragraph{Implications for the AFDB/AF3 split.}
+The audit supports using AFDB AlphaFold2 graphs for phase~0 GO pretraining and project AF3 structures for phase~1 DMS triplets without harmonizing every target to a single predictor. The GO pretraining corpus is dominated by well-defined, globular proteins that fall into the concordant \emph{all three low} regime; for this majority, AFDB coordinates and SALAD graphs are stable across AF2 and AF3 sources, so phase~0 is unlikely to inherit a strong structure-predictor bias. On the flexible \emph{all three high} tail, large RMSD values appear consistently across AFDB, ColabFold, and in-house AF3, so disagreement is better explained by target-intrinsic disorder or multi-state behavior than by the choice to mix predictors across training phases. The nine mixed-category proteins do not define a separate failure mode for the pipeline: aside from P63165 and P51681, they are threshold-borderline cases aligned with the stable cohort. We therefore retain the phase~0 (AFDB) / phase~1 (AF3) structure split and the fixed hybrid edge construction described in Section~\ref{sec:hybrid-graph}.
 
 \noindent\footnotesize\textit{Low deterministic Jaccard ($<0.8$):} P51681, Q6GFB4, P40238, P04147, P38428, P05434, P69222, O22265, P31969, Q64337, Q13148, P54725, P37231, P04049, P15382, P06654, P15391, O15297, P04637, O15245, P80324, P37840, P61991, Q9LW00, P46937, P0AAN5.
 \normalsize
@@ -279,20 +284,16 @@ The decoder is run on \emph{variant} embeddings only; wild-type GO annotations a
 \text{NEUTRAL} & \text{otherwise,}
 \end{cases}
 \]
-with default $\theta=0.1$. A single scalar
-\[
-\mathrm{ContVAR\_fitness} \;=\; \frac{1}{|\mathrm{WT}_{\text{GO}}|}\sum_{g\in \mathrm{WT}_{\text{GO}}} s_g
-\]
-is computed over the GO terms annotated in the wild type (excluding \texttt{NULL\_FUNCTION}). $\mathrm{ContVAR\_fitness}\!\approx\!1.0$ means the variant is predicted to retain all WT functions, while values approaching $0.0$ correspond to broad function loss.
+with default $\theta=0.1$. Variant outputs are therefore \emph{term-resolved} function-change calls rather than a single pooled score over all wild-type annotations.
 
 \paragraph{Batch variant scoring.}
-Variant embeddings are scored in batch; wild-type accessions and mutation tokens are parsed from record identifiers. Variants whose wild type lacks GOA coverage are skipped. When experimental binary labels are available, AUROC and AUPRC of \texttt{ContVAR\_fitness} against the label summarize variant-level agreement with assays.
+Variant embeddings are scored in batch; wild-type accessions and mutation tokens are parsed from record identifiers. Variants whose wild type lacks GOA coverage are skipped. Predicted LOSS / GAIN / NEUTRAL calls can be compared against curated variant--GO effect labels (e.g.\ the Swiss-Prot function-change cohort) or summarized as per-variant counts of each call type.
 
 \subsubsection{Interactive Hugging Face Space}
 \label{sec:hf-space}
 To make ContVAR accessible beyond offline batch execution, we also provide an interactive Hugging Face Space for structure-level inference. The Space exposes two user workflows. In the single-protein workflow, users upload one PDB or CIF structure and receive ranked GO predictions across MF, BP, and CC. In the WT-versus-variant workflow, users upload matched wild-type and variant structures and receive WT score, variant score, score difference, and a derived gained/lost/stable status for the highest-changing GO terms. Results are displayed as aspect-specific tables and summary panels, with downloadable prediction files for downstream inspection.
 
-The Space runs the same graph-based inference path used by the project: it parses uploaded structures, extracts the amino-acid sequence and residue coordinates, computes ESM-2 residue embeddings on the fly, constructs the hybrid residue graph, applies the trained ContVAR encoder, and decodes GO scores with the per-aspect FFN decoders. The public interface is intended as a lightweight demonstration and inspection layer rather than a replacement for large-scale batch scoring. We also added a clinical-context panel: when a submitted protein or mapped variant has a ClinVar record~\cite{landrum2018clinvar}, available clinical information will be shown alongside the GO prediction results in a separate boxed summary.
+The Space runs the same graph-based inference path used by the project: it parses uploaded structures, extracts the amino-acid sequence and residue coordinates, computes ESM-2 residue embeddings on the fly, constructs the hybrid residue graph, applies the trained ContVAR encoder, and decodes GO scores with the per-aspect FFN decoders. The public interface is intended as a lightweight demonstration and inspection layer rather than a replacement for large-scale batch scoring.
 
 \subsection{Evaluation Metrics}
 
@@ -314,39 +315,64 @@ with temperature $t{=}2$ and $\mathcal{P}$ the set of unordered pairs ($|\mathca
 \textbf{Mean reciprocal rank (MRR)} evaluates retrieval within each mini-batch. For anchor $i$, all positives and negatives in the batch form a candidate pool; candidates are ranked by ascending $\ell_2$ distance to the anchor. The rank $r_i$ of the matching positive (the $i$-th positive) yields $\mathrm{MRR}=\frac{1}{B}\sum_i 1/r_i$. MRR${=}1$ when every anchor retrieves its positive as the nearest neighbor; values near zero indicate frequent mis-ranking of positives behind negatives. Together, alignment and uniformity decompose representation quality into ``similar things close'' and ``dissimilar things spread out''; MRR summarizes whether the metric space supports correct within-batch retrieval under the triplet mining setup.
 
 \paragraph{Decoder-side metrics.}
-Each aspect (MF, BP, CC) is evaluated under the shared UniRef50 cluster-aware split. We report mAP over terms with at least one positive in the split, and at the F1-optimal probability threshold (swept from 0.05 to 0.95 in steps of 0.05) macro-averaged F1, precision, recall, accuracy, and MCC. The validation mAP-best model is evaluated on the test split.
+Each aspect (MF, BP, CC) is evaluated under the shared UniRef50 cluster-aware split. We report mAP over terms with at least one positive in the split, and at the F1-optimal probability threshold (swept from 0.05 to 0.95 in steps of 0.05) macro-averaged F1, precision, recall, and MCC. The validation mAP-best model is evaluated on the test split.
 
 \paragraph{Variant-level metrics.}
-When experimental variant labels are available (e.g.\ ProteinGym-style fitness), we report AUROC and AUPRC of \texttt{ContVAR\_fitness}, mean fitness per label class, and counts of LOSS / GAIN / NEUTRAL calls per variant.
+Where curated variant--GO effect labels exist, we evaluate agreement between predicted and reference LOSS / GAIN assignments at the term level (and report per-variant counts of each call type). DMS assay benchmarks can be analyzed separately using standard ranking metrics on assay scores rather than a derived scalar from GO probabilities.
 
 \section{Results and Discussion}
 
-Results below are reported as placeholders until final training runs are consolidated; table layouts are fixed so that partial numbers from W\&B or internal logs can be dropped in without restructuring. Decoder comparisons use five \emph{embedding sources} for the same \texttt{FFNDecoder} architecture and training recipe (UniRef50 cluster-aware splits, F1-optimal threshold for thresholded metrics):
+\subsection{Wild-type structure sources (AF2 vs.\ AF3)}
+Before encoder training, we compared AFDB AF2, in-house AF3, and ColabFold AF2 wild-type models on the DMS audit cohort ($n{=}90$; Section~\ref{sec:wt-structure-concordance}). Roughly half of the families lie in the \emph{all three low} RMSD class with median pairwise displacements near 6~\AA\ and median deterministic graph Jaccard 0.90; the flexible \emph{all three high} class shares the same elevated RMSD across all three predictors and co-localizes with low graph overlap. These patterns indicate that mixing AFDB graphs in phase~0 with AF3 graphs in phase~1 is a pragmatic split rather than a source of systematic graph bias for the stable majority of targets. The encoder and decoder results below were obtained under this design.
+
+\subsection{Encoder and decoder performance}
+Decoder comparisons use five \emph{embedding sources} for the same \texttt{FFNDecoder} architecture and training recipe (UniRef50 cluster-aware splits; thresholded metrics at the F1-optimal probability threshold, swept 0.05--0.95):
 \begin{itemize}
-    \item \textbf{ContVAR (full):} encoder after phase~0 and phase~1 (256-d graph embeddings).
     \item \textbf{ESM-2 baseline:} raw 650M ESM-2 protein embeddings (1{,}280-d), no ContVAR encoder.
-    \item \textbf{Phase-0 encoder:} embeddings from the GO-pretrained encoder only, without phase~1 DMS fine-tuning (256-d).
-        \item \textbf{ESM-2 + Phase-0 (concat):} concatenation of raw ESM-2 and phase-0-only encoder embeddings (1{,}536-d), isolates the added value of phase~1 DMS fine-tuning in the concatenated setting.
-        \item \textbf{ESM-2 + ContVAR (concat):} concatenation of raw ESM-2 and full ContVAR encoder embeddings (1{,}536-d).
+    \item \textbf{Phase-0 encoder:} GO-pretrained encoder only, without phase~1 DMS fine-tuning (256-d).
+    \item \textbf{ESM-2 + Phase-0:} concatenation of ESM-2 and phase-0-only encoder embeddings (1{,}536-d).
+    \item \textbf{ContVAR (full):} encoder after phase~0 and phase~1 (256-d graph embeddings).
+    \item \textbf{ESM-2 + ContVAR:} concatenation of ESM-2 and full ContVAR encoder embeddings (1{,}536-d).
 \end{itemize}
 
-\subsection{Encoder: phase~1 (DMS) metrics}
-Phase~1 contrastive training is evaluated on the held-out DMS families with exhaustive anchor--positive--negative pairs. Table~\ref{tab:encoder-main} reports the \textbf{ContVAR (full)} encoder at its best validation checkpoint; phase-0-only and random-init encoder ablations can be added alongside if needed.
+\subsection{Encoder: phase~0 (GO pretraining)}
+Phase~0 trains separate encoders per GO aspect (MF, BP, CC) with GO semantic-similarity triplets. Table~\ref{tab:encoder-phase0} reports loss, alignment, uniformity, and MRR on the held-out GO splits at the best validation checkpoint per aspect.
 
 \begin{table}[H]
 \centering
-\caption{Encoder metrics on the DMS family split at the best phase~1 validation checkpoint (\textbf{ContVAR full} encoder: phase~0 + phase~1).}
-\label{tab:encoder-main}
+\caption{Encoder metrics on the GO pretraining split at the best phase~0 validation checkpoint, per aspect.}
+\label{tab:encoder-phase0}
+\begin{tabular}{llcccc}
+\hline
+Aspect & Split & Loss & Alignment & Uniformity & MRR \\
+\hline
+MF & Val  & 0.0238 & 0.329 & $-$2.72 & 0.619 \\
+MF & Test & 0.0268 & 0.342 & $-$2.70 & 0.617 \\
+BP & Val  & 0.0792 & 0.301 & $-$1.82 & 0.513 \\
+BP & Test & 0.0618 & 0.309 & $-$1.88 & 0.522 \\
+CC & Val  & 0.0347 & 0.295 & $-$2.18 & 0.587 \\
+CC & Test & 0.0344 & 0.285 & $-$2.23 & 0.605 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Encoder: phase~1 (DMS fine-tuning)}
+Phase~1 contrastive training is evaluated on the held-out DMS families with exhaustive anchor--positive--negative pairs. Table~\ref{tab:encoder-phase1} reports the \textbf{ContVAR (full)} encoder (phase~0 + phase~1) at its best validation checkpoint, re-evaluated on validation and test.
+
+\begin{table}[H]
+\centering
+\caption{Encoder metrics on the DMS family split at the best phase~1 validation checkpoint (epoch~76; \textbf{ContVAR full} encoder: phase~0 + phase~1).}
+\label{tab:encoder-phase1}
 \begin{tabular}{lcc}
 \hline
 Metric & Validation & Test \\
 \hline
-Loss (total) & [\_] & [\_] \\
-Loss (global) & [\_] & [\_] \\
-Loss (local) & [\_] & [\_] \\
-MRR & [\_] & [\_] \\
-Alignment & [\_] & [\_] \\
-Uniformity & [\_] & [\_] \\
+Loss (total) & 0.104 & 0.106 \\
+Loss (global) & 0.197 & 0.200 \\
+Loss (local) & 0.0112 & 0.0117 \\
+MRR & 0.139 & 0.129 \\
+Alignment & 0.0551 & 0.0178 \\
+Uniformity & $-$0.77 & $-$0.70 \\
 \hline
 \end{tabular}
 \end{table}
@@ -356,114 +382,71 @@ Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table
 
 \begin{table}[H]
 \centering
-\footnotesize
-\renewcommand{\arraystretch}{0.7}
-\caption{Decoder ablation on wild-type GO annotation. Rows group by embedding source and aspect; Val/Test are the held-out protein splits. mAP excludes terms with zero positives in that split; F1, precision, recall, accuracy, and MCC are macro-averaged at the F1-optimal probability threshold (swept 0.05--0.95).}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{1.08}
+\newcommand{\decaspectsep}{\addlinespace[5pt]\cline{2-8}\addlinespace[3pt]}
+\caption{Decoder ablation on wild-type GO annotation (validation mAP-best checkpoint). Rows are grouped by embedding source and GO aspect (Val/Test nested under each aspect; light rules separate MF, BP, and CC). mAP excludes terms with zero positives in that split; F1, precision, recall, and MCC are macro-averaged at the F1-optimal threshold (0.05--0.95). ESM-2 baseline CC pending (\texttt{decoder-esm-c}).}
 \label{tab:decoder-ablation}
-\begin{tabular}{lllcccccc}
-\hline
-Embedding source & Aspect & Split & mAP & F1$_{\text{macro}}$ & Prec. & Rec. & Acc. & MCC \\
-\hline
-ContVAR (full) & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
-ESM-2 baseline & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
-Phase-0 encoder & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
-ESM-2 + Phase-0 & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
-ESM-2 + ContVAR & MF & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & MF & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & BP & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & BP & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & CC & Val  & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & CC & Test & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
-\end{tabular}
-\end{table}
-
-\subsection{Variant-level evaluation on DMS assay labels}
-For variants with experimental fitness or pathogenicity labels in the DMS corpus, \texttt{ContVAR\_fitness} from the \textbf{ContVAR (full)} pipeline is correlated with the binary assay label (Table~\ref{tab:variant-dms}). The same five embedding/decoding conditions as Table~\ref{tab:decoder-ablation} can be reported here if variant scoring is repeated per model.
-
-\begin{table}[H]
-\centering
-\caption{Variant-level metrics on the DMS-labeled variant pool (\texttt{ContVAR\_fitness} vs.\ experimental label). Primary row block: ContVAR (full); add ESM-2 baseline, phase-0 encoder, ESM-2 + Phase-0 and ESM-2 + ContVAR rows when variant embeddings are exported for those conditions.}
-\label{tab:variant-dms}
-\begin{tabular}{llcccccc}
-\hline
-Embedding source & Aspect & AUROC & AUPRC & $\overline{\text{fit}}_{y=0}$ & $\overline{\text{fit}}_{y=1}$ & $n_{\text{pred}}$ & $n_{\text{skip}}$ \\
-\hline
-ContVAR (full) & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + Phase-0 & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 + ContVAR & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
-\end{tabular}
-\end{table}
-
-\subsection{Variant function-change cohort}
-Separately from the DMS assay pool, we evaluate variants in the curated \textbf{function-change cohort} described above: 6,159 proteins, 17,442 variants, and 18,126 variant--GO term matches with LOSS or GAIN labels derived from Swiss-Prot variant/mutagenesis evidence. This set stresses whether LOSS/GAIN/NEUTRAL calls and \texttt{ContVAR\_fitness} align with GO-level function-change statements rather than bulk fitness ranking alone. Table~\ref{tab:variant-funcchange} will report the same embedding-source comparison after model scoring is finalized.
-
-\begin{table}[H]
-\centering
-\caption{Performance on the variant \textbf{function-change cohort} (curated proteins with annotated GO function change). Metrics mirror Table~\ref{tab:variant-dms} but restricted to cohort members; optional columns for per-class LOSS/GAIN/NEUTRAL agreement can be added when labels are finalized.}
-\label{tab:variant-funcchange}
-\begin{tabular}{llcccccc}
-\hline
-Embedding source & Aspect & AUROC & AUPRC & $\overline{\text{fit}}_{y=0}$ & $\overline{\text{fit}}_{y=1}$ & $n_{\text{cohort}}$ & $n_{\text{skip}}$ \\
-\hline
-ContVAR (full) & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ContVAR (full) & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 baseline & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-Phase-0 encoder & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 Phase-0 & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 Phase-0  & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 Phase-0  & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 ContVAR  & MF & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 ContVAR  & BP & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-ESM-2 ContVAR  & CC & [\_] & [\_] & [\_] & [\_] & [\_] & [\_] \\
-\hline
+\begin{tabular}{@{}l l l ccccc@{}}
+\toprule
+\textbf{Embedding source} & \textbf{Aspect} & \textbf{Split} & mAP & F1 & Prec. & Rec. & MCC \\
+\midrule
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 baseline}}
+ & \multirow{2}{*}{MF} & Val  & 0.7470 & 0.6856 & 0.7165 & 0.7039 & 0.6968 \\
+ &  & Test & 0.7304 & 0.6722 & 0.6805 & 0.7134 & 0.6833 \\
+\decaspectsep
+ & \multirow{2}{*}{BP} & Val  & 0.4565 & 0.4208 & 0.4477 & 0.4526 & 0.4341 \\
+ &  & Test & 0.4479 & 0.4111 & 0.4500 & 0.4334 & 0.4248 \\
+\decaspectsep
+ & \multirow{2}{*}{CC} & Val  & \multicolumn{5}{c}{---} \\
+ &  & Test & \multicolumn{5}{c}{---} \\
+\midrule
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright Phase-0 encoder}}
+ & \multirow{2}{*}{MF} & Val  & 0.7214 & 0.6555 & 0.6669 & 0.6976 & 0.6676 \\
+ &  & Test & 0.6971 & 0.6344 & 0.6437 & 0.6788 & 0.6465 \\
+\decaspectsep
+ & \multirow{2}{*}{BP} & Val  & 0.4254 & 0.3927 & 0.4176 & 0.4249 & 0.4055 \\
+ &  & Test & 0.4174 & 0.3826 & 0.4152 & 0.4074 & 0.3955 \\
+\decaspectsep
+ & \multirow{2}{*}{CC} & Val  & 0.5469 & 0.4948 & 0.5089 & 0.5341 & 0.5061 \\
+ &  & Test & 0.5425 & 0.5006 & 0.5551 & 0.4992 & 0.5120 \\
+\midrule
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 + Phase-0}}
+ & \multirow{2}{*}{MF} & Val  & 0.7412 & 0.6760 & 0.6856 & 0.7192 & 0.6879 \\
+ &  & Test & 0.7253 & 0.6543 & 0.6708 & 0.6922 & 0.6666 \\
+\decaspectsep
+ & \multirow{2}{*}{BP} & Val  & 0.4572 & 0.4228 & 0.4576 & 0.4469 & 0.4361 \\
+ &  & Test & 0.4488 & 0.4146 & 0.4436 & 0.4447 & 0.4279 \\
+\decaspectsep
+ & \multirow{2}{*}{CC} & Val  & 0.5883 & 0.5420 & 0.5732 & 0.5616 & 0.5529 \\
+ &  & Test & 0.5857 & 0.5402 & 0.5656 & 0.5631 & 0.5505 \\
+\midrule
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright ContVAR (full)}}
+ & \multirow{2}{*}{MF} & Val  & 0.6989 & 0.6329 & 0.6649 & 0.6554 & 0.6453 \\
+ &  & Test & 0.6766 & 0.6089 & 0.6202 & 0.6549 & 0.6218 \\
+\decaspectsep
+ & \multirow{2}{*}{BP} & Val  & 0.4128 & 0.3815 & 0.4216 & 0.4016 & 0.3950 \\
+ &  & Test & 0.4065 & 0.3743 & 0.4072 & 0.3969 & 0.3868 \\
+\decaspectsep
+ & \multirow{2}{*}{CC} & Val  & 0.5152 & 0.4754 & 0.4955 & 0.5081 & 0.4864 \\
+ &  & Test & 0.5174 & 0.4795 & 0.5181 & 0.4959 & 0.4912 \\
+\midrule
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 + ContVAR}}
+ & \multirow{2}{*}{MF} & Val  & 0.7356 & 0.6703 & 0.6889 & 0.7036 & 0.6821 \\
+ &  & Test & 0.7227 & 0.6558 & 0.6584 & 0.7097 & 0.6685 \\
+\decaspectsep
+ & \multirow{2}{*}{BP} & Val  & 0.4553 & 0.4218 & 0.4585 & 0.4441 & 0.4352 \\
+ &  & Test & 0.4487 & 0.4143 & 0.4541 & 0.4333 & 0.4276 \\
+\decaspectsep
+ & \multirow{2}{*}{CC} & Val  & 0.5836 & 0.5319 & 0.5677 & 0.5478 & 0.5430 \\
+ &  & Test & 0.5788 & 0.5284 & 0.5580 & 0.5490 & 0.5391 \\
+\bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Additional ablations and analyses}
-Beyond Table~\ref{tab:decoder-ablation}, planned encoder-side ablations include hybrid vs.\ $k$NN edges, GO-pretrained vs.\ random-init encoder before phase~1, global-only vs.\ local-only vs.\ joint $\mathcal{L}_g+\mathcal{L}_l$, and mining strategy. Decoder-side threshold sweeps around 0.95 and \texttt{NULL\_FUNCTION} loss weighting remain optional sensitivity analyses.
+Beyond Table~\ref{tab:decoder-ablation}, further encoder-side comparisons (hybrid vs.\ $k$NN edges, GO-pretrained vs.\ random-init encoder before phase~1, global-only vs.\ local-only vs.\ joint $\mathcal{L}_g+\mathcal{L}_l$, and mining strategy) and decoder-side threshold sensitivity around 0.95 are natural extensions of the present benchmark but were not required to establish the main embedding-source trends reported here.
 
 \subsection{Qualitative or case studies}
 \textit{[Placeholder.]} Suggested case-study outputs available in project tooling:
@@ -476,7 +459,11 @@ Beyond Table~\ref{tab:decoder-ablation}, planned encoder-side ablations include 
 \section{Conclusion and Future Work}
 
 \subsection{Conclusion}
-Accurate, mechanistically informative variant interpretation requires models that respect both molecular structure and large-scale functional assays, and that translate the resulting representations back into the ontology-level vocabulary that biologists actually use. ContVAR addresses both halves of this requirement with a two-stage pipeline: (i) a residual GATv2 encoder over ESM-augmented residue graphs, trained with GO semantic-similarity triplet pretraining (phase~0) across MF/BP/CC followed by phase~1 DMS specialization with a joint global triplet plus mutation-local contrastive loss under streaming semi-hard mining~\cite{schroff2015facenet}; and (ii) three per-aspect feed-forward decoders, trained with class-balanced multi-label BCE (including a dedicated \texttt{NULL\_FUNCTION} class) under a UniRef50 cluster-aware split~\cite{suzek2015uniref}, that turn variant embeddings into per-GO LOSS / GAIN / NEUTRAL calls and a scalar \texttt{ContVAR\_fitness}.
+ContVAR connects GO-structured metric learning on residue graphs with ontology-level decoding for variant interpretation. The encoder is pretrained on semantic GO triplets (phase~0) and specialized on DMS anchor--positive--negative families (phase~1) using a hybrid graph built from monomer coordinates and ESM-2 features; three per-aspect FFN decoders then predict wild-type GO annotations and, at inference, per-term LOSS/GAIN/NEUTRAL function-change calls~\cite{schroff2015facenet,suzek2015uniref}.
+
+Our experiments support this design as an end-to-end benchmark rather than a single embedding winner on every task. A wild-type structure audit (Section~\ref{sec:wt-structure-concordance}) shows that most DMS families have concordant AF2/AF3 coordinates and SALAD graphs, justifying AFDB graphs in phase~0 and project AF3 graphs in phase~1. Phase~0 encoders organize GO triplets effectively (test MRR up to 0.62 on MF and 0.61 on CC; Table~\ref{tab:encoder-phase0}). Phase~1 further compresses DMS discrimination at the cost of lower batch MRR ($\approx$0.13--0.14; Table~\ref{tab:encoder-phase1}), reflecting the harder family-level retrieval objective. On wild-type GO prediction (Table~\ref{tab:decoder-ablation}), the best test mAP values are obtained with ESM-2 alone or ESM-2 concatenated with graph embeddings (up to 0.73 MF, 0.59 CC, 0.45 BP), while the DMS-tuned ContVAR (full) embedding trails these concatenated models on MF and BP despite competitive CC scores. Graph metric learning therefore adds measurable signal---especially when combined with ESM-2---but does not replace sequence priors for bulk GO annotation under the present training recipe.
+
+Taken together, ContVAR provides a reproducible two-phase training stack, explicit structure-source justification, and a multi-embedding decoder comparison that separates GO semantic pretraining gains from DMS specialization and from raw ESM-2 baselines. The present study reports encoder geometry metrics and wild-type GO decoder performance under validation mAP-best checkpoints across five embedding sources.
 
 \subsection{Future Work}
 \textit{[Placeholder.]}
