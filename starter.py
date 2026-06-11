@@ -3,6 +3,8 @@
 import argparse
 import os
 
+import torch
+
 _REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 # This is the single place where the application paths live.
@@ -32,7 +34,7 @@ STARTER_PATHS = {
     "go_tsv_dir": os.path.join(_REPO_ROOT, "semantic_similarity"),
 
     # Prebuilt GO pretraining graphs.
-    "go_prebuilt_graph_root": None,
+    "go_prebuilt_graph_root": os.path.join(_REPO_ROOT, "model_go_pretraining_best_loss.pt"),
 
     # Optional initialization checkpoint for GO phase-0 warm start.
     "go_phase0_init_checkpoint_path": None,
@@ -44,6 +46,9 @@ STARTER_PATHS = {
     "go_phase0_last_model_path": os.path.join(_REPO_ROOT, "model_phase0_last.pt"),
     "stage2_best_model_path": os.path.join(_REPO_ROOT, "model_best_loss.pt"),
     "stage2_last_model_path": os.path.join(_REPO_ROOT, "model_last.pt"),
+    "stage2_epoch_checkpoint_template": os.path.join(
+        _REPO_ROOT, "model_epoch_{epoch}.pt"
+    ),
     "phase0_embeddings_export_path": os.path.join(
         _REPO_ROOT, "exports", "phase0_contvar_embeddings.h5"
     ),
@@ -104,6 +109,9 @@ def _build_config_overrides(args, paths):
         "go_protein_split_json_path": paths["go_protein_split_json_path"],
         "stage2_best_model_path": paths["stage2_best_model_path"],
         "stage2_last_model_path": paths["stage2_last_model_path"],
+        "stage2_epoch_checkpoint_template": paths[
+            "stage2_epoch_checkpoint_template"
+        ],
         "phase0_embeddings_export_path": paths["phase0_embeddings_export_path"],
         "dms_embeddings_export_path": paths["dms_embeddings_export_path"],
         "tsne_save_dir": paths["tsne_save_dir"],
@@ -126,6 +134,7 @@ def _print_path_summary(paths, config_overrides):
         "go_phase0_last_model_path",
         "stage2_best_model_path",
         "stage2_last_model_path",
+        "stage2_epoch_checkpoint_template",
         "phase0_embeddings_export_path",
         "dms_embeddings_export_path",
         "tsne_save_dir",
@@ -170,14 +179,39 @@ def _run_post_training_exports(model, mapper, processed_dir, config_overrides, p
     )
 
     print("\n=== Post-Training Visualization ===")
+    best_tsne_dir = os.path.join(paths["tsne_save_dir"], "best")
+    last_tsne_dir = os.path.join(paths["tsne_save_dir"], "last")
+
+    best_model_path = paths.get("stage2_best_model_path")
+    if best_model_path and os.path.exists(best_model_path):
+        print(f"[t-SNE] Loading best checkpoint: {best_model_path}")
+        model.load_state_dict(torch.load(best_model_path, map_location=env["device"]))
+
+    print("[t-SNE] Generating visualization for best checkpoint...")
     visualize_tsne(
         model=model,
         mapper=mapper,
         processed_dir=processed_dir,
         split="val",
         device=env["device"],
-        save_dir=paths["tsne_save_dir"],
+        save_dir=best_tsne_dir,
     )
+
+    last_model_path = paths.get("stage2_last_model_path")
+    if last_model_path and os.path.exists(last_model_path):
+        print(f"[t-SNE] Loading last checkpoint: {last_model_path}")
+        model.load_state_dict(torch.load(last_model_path, map_location=env["device"]))
+        print("[t-SNE] Generating visualization for last checkpoint...")
+        visualize_tsne(
+            model=model,
+            mapper=mapper,
+            processed_dir=processed_dir,
+            split="val",
+            device=env["device"],
+            save_dir=last_tsne_dir,
+        )
+    else:
+        print(f"[t-SNE] Skipping last-checkpoint visualization; not found: {last_model_path}")
 
 
 def main():

@@ -107,6 +107,12 @@ class DeepProteinGAT(nn.Module):
         res_num = data.residue_number.to(x.device) if hasattr(data, 'residue_number') and data.residue_number is not None else None
         return x, batch, res_num
 
+    def _global_embedding(self, x, batch):
+        """Mean-pooled global graph embedding."""
+        x_mean = global_mean_pool(x, batch)
+        z_global = self.projection(x_mean)
+        return F.normalize(z_global, p=2, dim=1)
+
     def _extract_local(self, x, batch, res_num, mut_pos):
         """Extract local embeddings at given positions from pre-computed node features.
         This is used during mining to efficiently get local embeddings without re-running the GNN."""
@@ -130,9 +136,7 @@ class DeepProteinGAT(nn.Module):
         x, batch, res_num = self._gnn_forward(data)
 
         # Global embedding
-        x_global = global_mean_pool(x, batch)
-        x_global = self.projection(x_global)
-        x_global = F.normalize(x_global, p=2, dim=1)
+        x_global = self._global_embedding(x, batch)
 
         # Local: embedding at mut_pos per graph (fallback to graph mean if position missing)
         if mut_pos is not None and res_num is not None:
@@ -150,9 +154,7 @@ class DeepProteinGAT(nn.Module):
         """
         x, batch, res_num = self._gnn_forward(data)
 
-        x_global = global_mean_pool(x, batch)
-        x_global = self.projection(x_global)
-        x_global = F.normalize(x_global, p=2, dim=1)
+        x_global = self._global_embedding(x, batch)
 
         if mut_pos is not None and res_num is not None:
             x_local = self._extract_local(x, batch, res_num, mut_pos)

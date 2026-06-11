@@ -63,21 +63,25 @@ def mine_negatives_streaming(model, anchor_embeds, pos_dists, batch_triplets,
         for chunk_start in range(0, len(neg_paths), chunk_size):
             chunk_paths = neg_paths[chunk_start:chunk_start + chunk_size]
             chunk_data = []
-            chunk_valid_paths = []
+            chunk_mut_pos = []
 
             for p in chunk_paths:
                 data = load_processed_graph_static(p, processed_dir)
                 if data is not None:
                     chunk_data.append(data)
-                    chunk_valid_paths.append(p)
+                    mut_p = parse_mut_pos_from_path(p)
+                    chunk_mut_pos.append(mut_p if mut_p is not None else -1)
 
             if not chunk_data:
                 continue
 
             chunk_batch = Batch.from_data_list(chunk_data).to(device)
+            chunk_mut_pos = torch.tensor(
+                chunk_mut_pos, dtype=torch.long, device=device
+            )
 
             with torch.no_grad():
-                chunk_embed, _ = model(chunk_batch)
+                chunk_embed, _ = model(chunk_batch, mut_pos=chunk_mut_pos)
 
             anchor_expanded = anchor_embed_i.expand(len(chunk_data), -1)
             chunk_dists = F.pairwise_distance(anchor_expanded, chunk_embed, p=2)
@@ -86,8 +90,7 @@ def mine_negatives_streaming(model, anchor_embeds, pos_dists, batch_triplets,
                 d = chunk_dists[j].item()
                 total_evaluated += 1
 
-                mut_p = parse_mut_pos_from_path(chunk_valid_paths[j])
-                mut_p_val = mut_p if mut_p is not None else -1
+                mut_p_val = int(chunk_mut_pos[j].item())
 
                 if d < closest_dist:
                     closest_dist = d
@@ -177,8 +180,9 @@ def streaming_mining_batch_iterator(model, triplets, processed_dir, device, cfg)
         model.eval()
 
         with torch.no_grad():
-            ea_mining, _ = model(batch_a)
-            ep_mining, _ = model(batch_p, mut_pos=mut_pos_positive.to(device))
+            mut_pos_positive_device = mut_pos_positive.to(device)
+            ea_mining, _ = model(batch_a, mut_pos=mut_pos_positive_device)
+            ep_mining, _ = model(batch_p, mut_pos=mut_pos_positive_device)
             pos_dist_mining = F.pairwise_distance(ea_mining, ep_mining, p=2)
 
         qual_negs, qual_mut_pos, neg_count_list, streaming_info = mine_negatives_streaming(

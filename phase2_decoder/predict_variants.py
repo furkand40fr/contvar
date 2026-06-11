@@ -30,11 +30,11 @@ from phase2_decoder.inference import load_decoder, predict_function_change
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# UniProt accession regex with optional isoform suffix.
-_UNIPROT_RE = re.compile(
-    r'^([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})(-\d+)?$'
+# UniProt accession regex
+_UNIPROT_RE  = re.compile(
+    r'^([OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2})$'
 )
-_MUTATION_RE = re.compile(r'^[A-Z]\d+[A-Z*]$', re.IGNORECASE)
+_MUTATION_RE = re.compile(r'^[A-Z]\d+[A-Z*]$')
 
 
 def mean_pool(h5f, key: str) -> torch.Tensor:
@@ -58,11 +58,9 @@ def parse_wt_id(variant_key: str, goa_ids: set) -> str | None:
       'ADRB2_HUMAN_Jones_2020_P07550_A119M_0'    → 'P07550'
       'BLAT_ECOLX_Stiffler_2015_P62593_A124V_1'  → 'P62593'
     """
-    normalized_goa_ids = {pid.upper(): pid for pid in goa_ids}
     for part in variant_key.split("_"):
-        candidate = part.upper()
-        if _UNIPROT_RE.match(candidate) and candidate in normalized_goa_ids:
-            return normalized_goa_ids[candidate]
+        if _UNIPROT_RE.match(part) and part in goa_ids:
+            return part
     return None
 
 

@@ -62,7 +62,7 @@ def compute_embedding_stats(model, loader, device, criterion, max_batches=None):
             neg_counts = neg_counts.to(device)
             mut_pos_positive = mut_pos_positive.to(device)
             mut_pos_negatives = mut_pos_negatives.to(device)
-            ea_g, _ = model(ba)
+            ea_g, _ = model(ba, mut_pos=mut_pos_positive)
             ep_g, ep_l = model(bp, mut_pos=mut_pos_positive)
             en_g, en_l = model(bn, mut_pos=mut_pos_negatives)
             _, _, en_neg_g, mining_stats = criterion(ea_g, ep_g, en_g, neg_counts)

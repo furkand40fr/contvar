@@ -1,3 +1,4 @@
+import math
 import os
 import time
 
@@ -21,14 +22,32 @@ from contvar.utils import load_all_embeddings
 from contvar.go_pretraining import run_go_pretraining
 
 
-def _load_model_checkpoint(model, checkpoint_path, device):
+def _load_model_checkpoint(model, checkpoint_path, device, strict=True):
     """Load either a raw state_dict or a checkpoint dict into the model."""
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
         state_dict = checkpoint["model_state_dict"]
     else:
         state_dict = checkpoint
-    model.load_state_dict(state_dict)
+    state_dict = {
+        key: value
+        for key, value in state_dict.items()
+        if not key.startswith("mutation_attention_")
+    }
+    incompatible = model.load_state_dict(state_dict, strict=strict)
+    if not strict:
+        missing = list(incompatible.missing_keys)
+        unexpected = list(incompatible.unexpected_keys)
+        if missing:
+            print(
+                "[Checkpoint] Missing keys initialized from current model: "
+                + ", ".join(missing)
+            )
+        if unexpected:
+            print(
+                "[Checkpoint] Unexpected keys ignored from checkpoint: "
+                + ", ".join(unexpected)
+            )
 
 
 def _ensure_parent_dir(path):
@@ -38,6 +57,81 @@ def _ensure_parent_dir(path):
     parent = os.path.dirname(os.path.abspath(path))
     if parent:
         os.makedirs(parent, exist_ok=True)
+
+
+def _should_save_stage2_epoch_checkpoint(epoch_number, extra_epochs, interval):
+    """Return whether Stage-2 should persist a snapshot for this epoch."""
+    if epoch_number in extra_epochs:
+        return True
+    return interval > 0 and epoch_number % interval == 0
+
+
+def _format_stage2_epoch_checkpoint_path(template, epoch_number):
+    """Build a Stage-2 epoch checkpoint path from a format template."""
+    if not template:
+        return None
+    return template.format(epoch=epoch_number)
+
+
+def _build_lr_scheduler(optimizer, cfg):
+    """Build the Stage-2 learning-rate scheduler."""
+    scheduler_type = str(getattr(cfg, "lr_scheduler", "warmup_cosine")).lower()
+    decay = float(getattr(cfg, "lr_decay", 1.0))
+    min_lr = float(getattr(cfg, "min_lr", 0.0))
+    base_lr = float(getattr(cfg, "lr", 0.0))
+    total_epochs = int(getattr(cfg, "epochs", 0))
+    warmup_epochs = int(getattr(cfg, "lr_warmup_epochs", 0))
+    warmup_start_factor = float(getattr(cfg, "lr_warmup_start_factor", 0.1))
+
+    if scheduler_type in ("none", "off", "disabled"):
+        return None
+    if base_lr <= 0:
+        return None
+    if decay <= 0:
+        raise ValueError(f"lr_decay must be positive, got {decay}")
+    if min_lr < 0:
+        raise ValueError(f"min_lr must be non-negative, got {min_lr}")
+    if min_lr > base_lr:
+        raise ValueError(f"min_lr ({min_lr}) cannot be greater than lr ({base_lr})")
+    if warmup_epochs < 0:
+        raise ValueError(f"lr_warmup_epochs must be non-negative, got {warmup_epochs}")
+    if not 0 < warmup_start_factor <= 1:
+        raise ValueError(
+            "lr_warmup_start_factor must be in the interval (0, 1], "
+            f"got {warmup_start_factor}"
+        )
+
+    min_factor = min_lr / base_lr if min_lr > 0 else 0.0
+
+    if scheduler_type == "exponential":
+        if decay >= 1.0:
+            return None
+
+        def lr_lambda(epoch):
+            return max(decay ** epoch, min_factor)
+
+        return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+    if scheduler_type not in ("cosine", "warmup_cosine"):
+        raise ValueError(
+            "lr_scheduler must be one of: none, exponential, cosine, warmup_cosine "
+            f"(got {scheduler_type!r})"
+        )
+
+    if scheduler_type == "cosine":
+        warmup_epochs = 0
+
+    def lr_lambda(epoch):
+        if warmup_epochs > 0 and epoch < warmup_epochs:
+            progress = epoch / max(1, warmup_epochs - 1)
+            return warmup_start_factor + progress * (1.0 - warmup_start_factor)
+
+        cosine_epochs = max(1, total_epochs - warmup_epochs)
+        progress = min(max((epoch - warmup_epochs) / cosine_epochs, 0.0), 1.0)
+        cosine_factor = 0.5 * (1.0 + math.cos(math.pi * progress))
+        return min_factor + (1.0 - min_factor) * cosine_factor
+
+    return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
 
 
 def evaluate(model, loader, criterion, device, margin=0.3):
@@ -162,14 +256,24 @@ def train_pipeline(config=None, force=False, data_root=None,
         if data_zip is None:
             data_zip = env.get("data_zip")
 
-    print(f"Training with LR: {cfg.lr}, Hidden: {cfg.hidden_dim}, Heads: {cfg.heads}")
+    print(
+        f"Training with LR: {cfg.lr}, Scheduler: {cfg.lr_scheduler}, "
+        f"Warmup epochs: {cfg.lr_warmup_epochs}, Min LR: {cfg.min_lr}, "
+        f"Hidden: {cfg.hidden_dim}, Heads: {cfg.heads}"
+    )
     print(f"Streaming Mining: chunk_size={cfg.mining_chunk_size}, max_negatives={cfg.max_negatives}")
     print(f"Gradient Accumulation: {cfg.grad_accumulation_steps} steps (effective batch = {cfg.mining_batch_size * cfg.grad_accumulation_steps})")
     print(f"Eval Batch Size: {cfg.eval_batch_size}")
     print(f"Local Loss: Contrastive (attract good / repel bad at mutation position)")
+    print("Global Pooling: global_mean_pool")
     print(f"DMS protein split: {cfg.dms_protein_split_json_path}")
     print(f"Stage-2 best checkpoint: {cfg.stage2_best_model_path}")
     print(f"Stage-2 last checkpoint: {cfg.stage2_last_model_path}")
+    if getattr(cfg, "stage2_epoch_checkpoint_template", None):
+        print(
+            "Stage-2 epoch checkpoint template: "
+            f"{cfg.stage2_epoch_checkpoint_template}"
+        )
 
     shared_embeddings = None
     if force and embeddings_path:
@@ -183,7 +287,7 @@ def train_pipeline(config=None, force=False, data_root=None,
         hidden_dim=cfg.hidden_dim,
         output_dim=cfg.output_dim,
         heads=cfg.heads,
-        edge_dim=cfg.edge_attr_dim
+        edge_dim=cfg.edge_attr_dim,
     ).to(device)
 
     init_checkpoint_path = getattr(cfg, "go_phase0_init_checkpoint_path", None)
@@ -192,11 +296,12 @@ def train_pipeline(config=None, force=False, data_root=None,
             raise FileNotFoundError(
                 f"GO phase-0 init checkpoint not found: {init_checkpoint_path}"
             )
-        _load_model_checkpoint(model, init_checkpoint_path, device)
+        _load_model_checkpoint(model, init_checkpoint_path, device, strict=False)
         print(f"[Phase0] Initialized model from checkpoint: {init_checkpoint_path}")
         run.summary["phase0_init_checkpoint_path"] = init_checkpoint_path
 
     optimizer = optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    lr_scheduler = _build_lr_scheduler(optimizer, cfg)
 
     standard_criterion = StandardTripletLoss(margin=cfg.margin)
     semihard_criterion = SemiHardMiningTripletLoss(margin=cfg.margin)
@@ -285,10 +390,24 @@ def train_pipeline(config=None, force=False, data_root=None,
     last_model_path = (
         getattr(cfg, "stage2_last_model_path", None) or "model_last.pt"
     )
+    epoch_checkpoint_template = getattr(
+        cfg, "stage2_epoch_checkpoint_template", None
+    )
+    epoch_checkpoint_extra_epochs = {
+        int(epoch)
+        for epoch in (
+            getattr(cfg, "stage2_epoch_checkpoint_extra_epochs", (80,)) or ()
+        )
+    }
+    epoch_checkpoint_interval = int(
+        getattr(cfg, "stage2_epoch_checkpoint_interval", 100) or 0
+    )
     _ensure_parent_dir(best_model_path)
     _ensure_parent_dir(last_model_path)
 
     for epoch in range(cfg.epochs):
+        epoch_number = epoch + 1
+        current_lr = optimizer.param_groups[0]["lr"]
         train_loader = streaming_mining_batch_iterator(
             model, main_train_dataset.triplets, processed_dir, device, cfg
         )
@@ -297,7 +416,10 @@ def train_pipeline(config=None, force=False, data_root=None,
 
         print(f"\n{'='*60}")
         print(f"Epoch {epoch+1}/{cfg.epochs} | Stage-2 Streaming Semi-Hard Mining")
-        print(f"Batch size: {current_batch_size} | Train batches: ~{num_train_batches}")
+        print(
+            f"Batch size: {current_batch_size} | Train batches: ~{num_train_batches} | "
+            f"LR: {current_lr:.6g}"
+        )
         print(f"{'='*60}")
 
         # =====================================================================
@@ -489,6 +611,7 @@ def train_pipeline(config=None, force=False, data_root=None,
             "train/epoch_MRR": train_epoch_metrics.get("MRR", 0),
             "train/epoch_Uniformity": train_epoch_metrics.get("Uniformity", 0),
             "train/epoch_duration_sec": epoch_duration_sec,
+            "train/lr": current_lr,
 
             "val/loss": val_metrics.get("loss", 0),
             "val/loss_global": val_metrics.get("loss_global", 0),
@@ -521,14 +644,14 @@ def train_pipeline(config=None, force=False, data_root=None,
         # Save best model
         if val_metrics.get("loss", float('inf')) < best_val_loss:
             best_val_loss = val_metrics["loss"]
-            best_epoch = epoch + 1
+            best_epoch = epoch_number
             model_name = best_model_path
             torch.save(model.state_dict(), model_name)
 
             artifact = wandb.Artifact(
                 name=f"ContVAR-Best-Model-{wandb.run.id}",
                 type="model",
-                description=f"Best model at epoch {epoch+1} with val_loss {best_val_loss:.4f}"
+                description=f"Best model at epoch {epoch_number} with val_loss {best_val_loss:.4f}"
             )
             artifact.add_file(model_name)
             wandb.log_artifact(artifact)
@@ -536,14 +659,36 @@ def train_pipeline(config=None, force=False, data_root=None,
         epoch_log["val/best_loss_so_far"] = best_val_loss
         epoch_log["val/best_epoch_so_far"] = best_epoch if best_epoch is not None else 0
 
+        epoch_checkpoint_path = None
+        if _should_save_stage2_epoch_checkpoint(
+            epoch_number,
+            epoch_checkpoint_extra_epochs,
+            epoch_checkpoint_interval,
+        ):
+            epoch_checkpoint_path = _format_stage2_epoch_checkpoint_path(
+                epoch_checkpoint_template, epoch_number
+            )
+            if epoch_checkpoint_path:
+                _ensure_parent_dir(epoch_checkpoint_path)
+                torch.save(model.state_dict(), epoch_checkpoint_path)
+                epoch_log["checkpoint/epoch_snapshot_saved"] = True
+                epoch_log["checkpoint/epoch_snapshot_epoch"] = epoch_number
+                print(
+                    "[Stage2] Saved epoch checkpoint "
+                    f"to {epoch_checkpoint_path}"
+                )
+
         wandb.log(epoch_log)
+        if lr_scheduler is not None:
+            lr_scheduler.step()
 
         saved_str = "(Saved)" if epoch_log.get("best_model_saved") else ""
+        epoch_saved_str = "(Epoch checkpoint saved)" if epoch_checkpoint_path else ""
         print(f"[Stage2] Epoch {epoch+1} | Train Loss: {avg_train_loss:.4f} | "
               f"Val Loss: {val_metrics.get('loss', 0):.4f} | "
               f"Val MRR: {val_metrics.get('MRR', 0):.4f} | "
               f"Local[E:{epoch_local_easy_total} S:{epoch_local_semi_hard_total} H:{epoch_local_hard_total}] "
-              f"{saved_str}")
+              f"{saved_str} {epoch_saved_str}")
 
     # Save last epoch model
     torch.save(model.state_dict(), last_model_path)

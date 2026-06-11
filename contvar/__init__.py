@@ -12,6 +12,9 @@ __all__ = [
     "StandardTripletLoss",
     "get_loss_function",
     "train_pipeline",
+    "load_frozen_contvar_model",
+    "embed_batch_global_mean",
+    "export_batch_embeddings",
     "visualize_tsne",
     "visualize_graph",
 ]
@@ -26,6 +29,9 @@ _LAZY_EXPORTS = {
     "StandardTripletLoss": ("contvar.losses", "StandardTripletLoss"),
     "get_loss_function": ("contvar.losses", "get_loss_function"),
     "train_pipeline": ("contvar.training", "train_pipeline"),
+    "load_frozen_contvar_model": ("contvar.inference", "load_frozen_contvar_model"),
+    "embed_batch_global_mean": ("contvar.inference", "embed_batch_global_mean"),
+    "export_batch_embeddings": ("contvar.inference", "export_batch_embeddings"),
     "visualize_tsne": ("contvar.viz_tsne", "visualize_tsne"),
     "visualize_graph": ("contvar.viz_graph", "visualize_graph"),
 }

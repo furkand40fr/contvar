@@ -28,57 +28,66 @@ def test_eval(cfg: DecoderConfig = None):
     n_classes   = len(go_vocab)
     print(f"GO vocab size: {n_classes}")
 
+    val_ds = GOAnnotationDataset(
+        cfg.esm_h5, cfg.contvar_h5, annotations, go_vocab,
+        split="val",
+        uniref_tsv=cfg.uniref_tsv,
+        split_json=cfg.split_json,
+        embedding_type=cfg.embedding_type,
+    )
     test_ds = GOAnnotationDataset(
-        cfg.embeddings_h5, annotations, go_vocab,
+        cfg.esm_h5, cfg.contvar_h5, annotations, go_vocab,
         split="test",
         uniref_tsv=cfg.uniref_tsv,
         split_json=cfg.split_json,
+        embedding_type=cfg.embedding_type,
     )
-    print(f"Test: {len(test_ds)} proteins")
+    print(f"Validation: {len(val_ds)} | Test: {len(test_ds)} proteins")
 
-    test_loader = DataLoader(test_ds, batch_size=cfg.batch_size,
-                             shuffle=False, num_workers=0)
+    val_loader = DataLoader(val_ds, batch_size=cfg.batch_size, shuffle=False, num_workers=0)
+    test_loader = DataLoader(test_ds, batch_size=cfg.batch_size, shuffle=False, num_workers=0)
 
-    print(f"Loading checkpoint: {cfg.decoder_checkpoint}")
-    model = FFNDecoder(cfg.encoder_output_dim, n_classes,
+    print(f"Loading best model from {cfg.decoder_checkpoint} for final evaluation...")
+    decoder = FFNDecoder(cfg.encoder_output_dim, n_classes,
                        cfg.hidden_dims, cfg.dropout).to(DEVICE)
-    model.load_state_dict(torch.load(cfg.decoder_checkpoint, map_location=DEVICE))
-    model.eval()
+    decoder.load_state_dict(torch.load(cfg.decoder_checkpoint, map_location=DEVICE))
+    decoder.eval()
 
     wandb.login(key=cfg.wandb_api_key)
     wandb.init(
         project=cfg.wandb_project,
         entity=cfg.wandb_entity,
-        name="test-eval",
+        name=f"test-eval-{cfg.aspect.lower()}",
         config={
             "checkpoint": cfg.decoder_checkpoint,
             "threshold":  cfg.eval_threshold,
+            "val_size":   len(val_ds),
             "test_size":  len(test_ds),
         },
     )
 
-    m = evaluate(model, test_loader, DEVICE, threshold=cfg.eval_threshold)
-
-    print(
-        f"\nTest | threshold={cfg.eval_threshold} | "
-        f"mAP={m['mAP']:.4f} | F1={m['F1_macro']:.4f} | "
-        f"Precision={m['Precision']:.4f} | Recall={m['Recall']:.4f} | "
-        f"Accuracy={m['Accuracy']:.4f} | MCC={m['MCC']:.4f}"
-    )
-
-    wandb.log({
-        "test/mAP":       m["mAP"],
-        "test/F1_macro":  m["F1_macro"],
-        "test/Precision": m["Precision"],
-        "test/Recall":    m["Recall"],
-        "test/Accuracy":  m["Accuracy"],
-        "test/MCC":       m["MCC"],
-    })
-    for k, v in m.items():
-        wandb.run.summary[f"test/{k}"] = v
+    asp = cfg.aspect.lower()
+    
+    val_metrics = evaluate(decoder, val_loader, DEVICE, aspect=cfg.aspect, threshold=cfg.eval_threshold)
+    test_metrics = evaluate(decoder, test_loader, DEVICE, aspect=cfg.aspect, threshold=cfg.eval_threshold)
+    
+    import pandas as pd
+    metrics_keys = ["mAP", "F1_macro", "Accuracy", "Precision", "Recall", "MCC"]
+    
+    val_row = {k: val_metrics[f"{k}_{asp}"] for k in metrics_keys}
+    test_row = {k: test_metrics[f"{k}_{asp}"] for k in metrics_keys}
+    
+    df = pd.DataFrame([val_row, test_row], index=["Validation", "Test"])
+    print("\nFinal Performance Metrics:")
+    print(df.to_markdown(floatfmt=".4f"))
+    
+    # Log to wandb
+    wandb.log({"Final_Performance_Table": wandb.Table(dataframe=df.reset_index())})
+    for k in metrics_keys:
+        wandb.run.summary[f"test_best_{k}_{asp}"] = test_metrics[f"{k}_{asp}"]
 
     wandb.finish()
-    return m
+    return test_metrics
 
 
 if __name__ == "__main__":
@@ -86,5 +95,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--aspect", default="F", choices=["F", "P", "C"],
                         help="GO aspect: F=MF, P=BP, C=CC")
+    parser.add_argument("--embedding", default="concat",
+                        choices=["esm", "contvar", "concat"],
+                        help="Embedding type: esm, contvar, or concat")
     args = parser.parse_args()
-    test_eval(DecoderConfig(aspect=args.aspect))
+    test_eval(DecoderConfig(aspect=args.aspect, embedding_type=args.embedding))
