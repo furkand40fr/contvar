@@ -1,0 +1,598 @@
+%%
+%% Copyright 2025 Oxford University Press
+%%
+%% This file is part of the 'oup-authoring-template Bundle'.
+%% ---------------------------------------------
+%%
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.3 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    https://www.latex-project.org/lppl.txt
+%% and version 1.2 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%%
+%% The list of all files belonging to the 'oup-authoring-template Bundle' is
+%% given in the file `manifest.txt'.
+%%
+%% Template article for Oxford University Press's document class `oup-authoring-template'
+%% with bibliographic references
+%%
+
+%%%CONTEMPORARY%%%
+\documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}%
+%\documentclass[unnumsec,webpdf,contemporary,large,numbered]{oup-authoring-template}% uncomment this line to get the numbered reference output
+%\documentclass[unnumsec,webpdf,contemporary,medium]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,contemporary,mediumone]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,contemporary,small]{oup-authoring-template}
+
+%%%MODERN%%%
+%\documentclass[unnumsec,webpdf,modern,large]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,modern,large,numbered]{oup-authoring-template}%   uncomment this line to get the numbered reference output
+%\documentclass[unnumsec,webpdf,modern,medium]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,modern,mediumone]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,modern,small]{oup-authoring-template}
+
+%%%TRADITIONAL%%%
+%\documentclass[unnumsec,webpdf,traditional,large]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,traditional,large,numbered]{oup-authoring-template}%   uncomment this line to get the numbered reference output
+%\documentclass[unnumsec,webpdf,traditional,medium]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,traditional,mediumone]{oup-authoring-template}
+%\documentclass[namedate,webpdf,traditional,small]{oup-authoring-template}
+
+%\onecolumn % for one column layouts
+
+%\usepackage{showframe}
+
+\graphicspath{{Fig/}}
+
+% line numbers
+%\usepackage[mathlines, switch]{lineno}
+%\usepackage[right]{lineno}
+
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+%%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
+%% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
+\newtheorem{proposition}[theorem]{Proposition}%
+%%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}
+
+%\usepackage{draftwatermark}
+%\SetWatermarkText{Draft}
+%%Uncomment  \usepackage{draftwatermark} and \SetWatermarkText{Draft} to watermark your PDF as a draft
+\begin{document}
+
+\journaltitle{Journal Title Here}
+\DOI{DOI added during production}
+\copyrightyear{YEAR}
+\pubyear{YEAR}
+\vol{XX}
+\issue{x}
+\access{Published: Date added during production}
+\appnotes{Paper}
+
+\firstpage{1}
+
+%\subtitle{Subject Section}
+
+\title[ContVAR Report]{ContVAR: Two-Stage Mutation-Aware Protein Graph Representation Learning}
+
+\author[1,$\ast$]{Author 1}
+\author[2]{Author 2}
+\author[3]{Author 3}
+\author[3]{Author 4}
+\author[4]{Author 5\ORCID{0000-0000-0000-0000}}
+
+\address[1]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+\address[2]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+\address[3]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+\address[4]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+
+\corresp[$\ast$]{Corresponding author. \href{email:email-id.com}{email-id.com}}
+
+\received{April}{26}{2026}
+\revised{April}{27}{2026}
+\accepted{April}{27}{2026}
+
+%\editor{Associate Editor: Name}
+
+%\abstract{
+%\textbf{Motivation:} .\\
+%\textbf{Results:} .\\
+%\textbf{Availability:} .\\
+%\textbf{Contact:} \href{name@email.com}{name@email.com}\\
+%\textbf{Supplementary information:} Supplementary data are available at \textit{Journal Name}
+%online.}
+
+\abstract{Predicting the functional impact of single amino acid variants requires a learning framework that captures protein structure, mutation-position context, and limited supervision jointly. This paper presents ContVAR as a graph-based deep metric-learning pipeline for this task. The approach follows a three-phase strategy: Phase 0 GO semantic pretraining, Phase 1 DMS triplet fine-tuning, and Phase 2 DMS hard/semi-hard mining refinement. To capture structural and sequence-level patterns, the model employs a residual two-layer GATv2 encoder and uses ESM-2 representations as node features within protein graphs. The training objective combines global triplet separation with local mutation-position contrastive supervision under streaming semi-hard negative mining. The resulting system provides a reproducible training and evaluation workflow with checkpoint tracking, embedding export, and visualization utilities for iterative analysis.}
+
+\keywords{single amino acid variant prediction, protein function prediction, protein graph neural networks, contrastive metric learning, mutation-aware embeddings}
+
+\keywords[Abbreviations]{SAV, DMS, GO, GATv2, ESM, MRR}
+
+
+\otherabstract[Graphical Abstract]{
+    \centering
+    \includegraphics[height=5.5cm, keepaspectratio]{GraphicalAbstarct.png}
+}
+\boxedtext{Key Messages}{
+\begin{itemize}
+\item ContVAR introduces a three-phase training strategy: Phase 0 GO pretraining, Phase 1 DMS fine-tuning, and Phase 2 DMS hard-mining refinement.
+\item The GATv2 encoder jointly learns global protein representations and mutation-local embeddings by explicitly utilizing ESM-2 features under combined triplet and contrastive objectives.
+\item The proposed pipeline provides a fully reproducible, checkpoint-driven infrastructure, offering a reliable computational tool to identify variant-driven functional alterations.
+\end{itemize}}
+
+\maketitle
+
+%\begin{epigraph}
+%Epigraph text. Ximporem qui reperov idempedit modio. Bisto imagnatem quae aceptis
+%nobitae quid eum rae adignis quias-sit vellacc uptatur sunt quis rentis eaquasit alia deliquam
+%rec-to consed unt. Empor sum ratur ressimusdae. Nam fugiae.
+%\source{Epigraph source}
+%\end{epigraph}
+
+\section{Introduction}
+Accurate interpretation of single amino acid variants (SAVs) is a central challenge in computational biology and precision medicine. While existing computational tools effectively classify variants as broadly pathogenic or benign, they often provide limited mutation-site-aware structural reasoning. Furthermore, many clinically relevant variant effects are mediated by local structural context and residue-level interactions that are difficult to capture with sequence-only approaches. This motivates graph-based representation learning frameworks that jointly model residue descriptors, structural neighborhoods, and mutation-aware supervision.
+
+ContVAR is developed in this context as a novel protein graph metric-learning system. To train the model effectively under limited functional supervision, triplets are constructed from the same protein family: wild-type structures serve as anchors, benign variants as positives, and pathogenic variants as negatives. This setup aligns optimization with a biologically meaningful geometry, ensuring that benign variants remain close to wild-type embeddings in the latent space, while disruptive pathogenic variants are distinctly separated.
+
+To capture complex topological features, the model employs a residual GATv2 encoder with edge-aware message passing. It integrates high-dimensional ESM-2 language model representations as node features and utilizes two complementary representation heads: a global graph embedding branch and a mutation-position local embedding branch. The training workflow follows a three-phase regime: GO semantic pretraining (Phase 0), DMS fine-tuning (Phase 1), and DMS hard-mining refinement (Phase 2). This design provides both optimization efficiency and robust discrimination capabilities.
+
+This manuscript documents the methodological backbone, the three-phase training strategy, and the evaluation protocol of ContVAR. By establishing a reproducible computational pipeline, the project provides a structured foundation for subsequent experimental comparisons and model refinement.
+
+\section{Related Work}\label{sec2}
+
+Recent computational efforts to evaluate the impact of single amino acid variants (SAVs) can be broadly categorized into sequence-based methods, structure-assisted predictors, and metric-learning approaches. Traditional variant effect predictors (e.g., SIFT, PolyPhen-2, and CADD) rely heavily on evolutionary conservation and sequence features to evaluate mutations. While highly data-efficient, they predominantly formulate the problem as binary or multi-class classification (e.g., pathogenic vs. benign). Consequently, they fail to pinpoint specific gained or lost molecular functions, which is crucial for advanced biological mechanism studies.
+
+Moreover, structure-informed methods improve biological interpretability by encoding neighborhood topology and contact-level interactions, especially for variants where local packing changes are critical. Historically, these methods were constrained by limited availability of structural data for mutated proteins. Recent progress in protein structure prediction has reduced this barrier at a field level, although the present pipeline focuses on graph construction and metric learning rather than direct integration of a specific external prediction tool.
+
+\subsection{Background concepts and recent approaches}\label{subsec1}
+Graph neural networks (GNNs) are increasingly utilized in protein modeling because they directly map residues and residue-residue interactions into message passing operations. Attention-based variants such as GAT-style encoders are particularly advantageous when mutation effects are context-dependent and should be weighted by local structural relevance. 
+
+Concurrently, the emergence of comprehensive Deep Mutational Scanning (DMS) datasets has provided new opportunities to train models on broad functional landscapes. To leverage these high-throughput datasets effectively under limited explicit functional supervision, contrastive and triplet-based learning strategies have shown strong performance. By enforcing relative similarity constraints rather than absolute class labels, these metric-learning approaches elegantly map benign variants close to their wild-type anchors while pushing disruptive mutations apart, constructing a highly discriminative latent space.
+
+
+
+
+\subsubsection{Comparative discussion and research gap}\label{subsubsec1}
+Although prior studies combine structural graphs and deep learning, most pipelines emphasize global protein representations and do not explicitly supervise mutation-site embeddings during fine-tuning. This leaves a practical gap for tasks where pathogenicity depends on localized structural disruption. ContVAR addresses this gap by jointly optimizing global discrimination and mutation-position local consistency through a dual-objective design.
+
+\paragraph{Position of this study}
+This report presents the complete computational backbone and fine-tuning pipeline of the ContVAR system. The primary contribution is both methodological and infrastructural: establishing a reproducible, deep metric-learning stack capable of accurately capturing variant effects, and delivering this pipeline as an accessible software tool.
+
+\subparagraph{Scope boundary}
+While the broader vision of variant effect prediction often involves in vitro functional validation and wet-lab experiments, such physical assessments are beyond the scope of this computational project. Instead, the scope is strictly bounded to AI system design, model optimization, and reproducible computational evaluation.
+
+\section{Methodology}\label{sec3}
+
+\subsection{Overall Framework}\label{subsec2}
+The ContVAR workflow is implemented as a modular staged pipeline designed to transition from general semantic protein representations to variant-sensitive metric embeddings. The execution is managed through a centralized \texttt{starter.py} script, which handles environment configurations, directory resolution, and the execution of training phases, followed by automated model checkpointing and visualization exports. The training regime is divided into three sequential phases:
+\begin{itemize}
+    \item \textbf{Phase 0 (GO Pretraining):} Biologically informed representations are learned using GO semantic similarity triplets.
+    \item \textbf{Phase 1 (DMS Fine-tuning):} Task-specific optimization is performed on DMS triplets to learn core benign/pathogenic separation.
+    \item \textbf{Phase 2 (DMS Hard-Mining Refinement):} Hard and semi-hard negatives are emphasized to sharpen the decision boundary and improve ranking behavior.
+\end{itemize}
+
+\subsubsection{Dataset Description}\label{subsubsec2}
+The training architecture is centered around a triplet-based organization. For each protein, data is structured as wild-type anchors, benign/neutral positives, and pathogenic negatives. To ensure deterministic and reproducible experiment setups, split mapping (train/validation/test) is controlled via JSON configuration files within the \texttt{local\_splits} directory. These partitions are strictly determined at the protein-family level to prevent information leakage and ensure the model generalizes across diverse structural topologies.
+
+\subsubsection{Dataset Preparation and Preprocessing}
+The preprocessing pipeline converts 3D monomer structures, generated via AlphaFold, into computational graphs. For each variant, spatial coordinates are transformed into an adjacency matrix based on residue-level proximity. A key technical feature of our pipeline is the integration of ESM-2 protein language model representations. These high-dimensional embeddings are utilized as initial node features, allowing the GATv2 encoder to leverage both explicit structural topology and pre-learned evolutionary context.
+
+The system supports both pre-cached graph usage and on-demand processing. During training, streaming semi-hard negative mining is employed to sample informative triplets dynamically. This ensures that the model focuses on challenging cases while maintaining memory efficiency during large-scale mini-batch construction.
+
+Phase 0 utilizes triplets derived from semantic similarity scores across Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) categories. Phase 1 then transitions to pathogenicity-oriented triplet supervision on DMS data. Phase 2 keeps the same DMS source but increases emphasis on hard and semi-hard negatives through streaming mining. This sequence allows the model to acquire a broad functional prior before specializing in mutation-driven structural perturbations.
+
+
+\paragraph{Model and Architecture Design}
+The core encoder is a residual two-layer GATv2 network with edge-aware message passing, operating on ESM-2 initialized node features. Hidden channels are projected utilizing multi-head attention and normalized between layers. Crucially, residual projections preserve high-dimensional information from the input embeddings and stabilize optimization under sparse and noisy labels. Following node propagation, two parallel projection branches are employed: a global branch for protein-level metric separation and a local branch for mutation-position embedding extraction.
+
+Phase 0 pretraining utilizes ontology-specific GO heads (MF, BP, and CC) operating on global embeddings. This phase provides a biologically informed warm start, significantly improving initialization prior to task-specific optimization. This pretraining is executed with dedicated GO settings, including a separate margin and ontology sampling policy, and is saved as independent checkpoints.
+
+Phase 1 specializes the shared encoder on DMS triplets using core triplet supervision. Subsequently, Phase 2 continues on the DMS data with an explicit emphasis on hard and semi-hard negative mining. In practice, this corresponds to a streaming semi-hard mining loop coupled with gradient accumulation and gradient clipping to ensure stable training. Checkpoint selection is dynamically determined based on validation loss before being transferred to final test evaluation. In this architectural design, the ``decoder'' role is elegantly implemented by projection heads that map latent graph features into normalized embedding spaces, which are then optimized by global triplet and local contrastive objectives.
+
+
+\subparagraph{Evaluation Metrics}
+The evaluation protocol employs a comprehensive suite of metrics to assess both classification performance and latent space quality. Primary discriminative performance between pathogenic and benign variants is quantified using AUROC, AUPR, and F1-score. To rigorously evaluate the geometric properties of the metric-learning embedding space, the system additionally computes Alignment, Uniformity, and Mean Reciprocal Rank (MRR).
+
+All metrics are systematically logged at both the batch and epoch levels, with final evaluations conducted on validation and test splits using the best-performing checkpoints. Furthermore, supplemental embedding statistics---such as cosine similarities for anchor-positive and anchor-negative pairs, alongside embedding variance in global and local spaces---are tracked as stability diagnostics.
+
+Beyond standard scalar metrics, the evaluation pipeline records dynamic mining statistics (hard, semi-hard, and qualifying negative ratios) and local-branch distance behaviors. These granular signals are critical for diagnosing whether fluctuations in performance stem from representation quality, sampling dynamics, or optimization instability.
+
+\section{Results and Discussion}\label{sec4}
+
+The current phase of evaluation focuses on system validation and architectural robustness. The experimental infrastructure confirms that the full training loop is fully operational and highly reproducible, successfully bridging data loading, checkpoint selection, and embedding export. 
+
+The optimization is governed by a dual-objective design. The global triplet loss enforces separation at the protein level:
+\begin{equation}
+\mathcal{L}_{global}=\max\left(0,d(z_a^g,z_p^g)-d(z_a^g,z_n^g)+m\right),
+\label{eq1}
+\end{equation}
+while the local contrastive loss supervises mutation-site perturbations:
+\begin{equation}
+\mathcal{L}_{local}=y\,d(z_{wt}^l,z_{mut}^l)^2+(1-y)\max(0,m-d(z_{wt}^l,z_{mut}^l))^2,
+\label{eq2}
+\end{equation}
+yielding the combined optimization objective:
+\begin{equation}
+\mathcal{L}_{total}=\frac{1}{2}\left(\mathcal{L}_{global}+\mathcal{L}_{local}\right).
+\end{equation}
+
+Preliminary training behavior indicates that streaming semi-hard mining significantly improves negative quality and stabilizes ranking-oriented learning. Furthermore, Phase 0 (GO warm-start) enhances early convergence stability during the subsequent DMS phases, while the local loss captures subtle mutation-site perturbations that are often masked in pooled global embeddings.
+
+\begin{table}[!t]
+\caption{Target performance metrics for ContVAR evaluation.\label{tab1}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lcc@{\extracolsep\fill}}
+\toprule
+Metric & Validation & Test\\
+\midrule
+AUROC & [X] & [X]\\
+F1-Score & [X] & [X]\\
+MRR & [X] & [X]\\
+Alignment & [X] & [X]\\
+Uniformity & [X] & [X]\\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item Source: Best-checkpoint logs tracked across Phase 2 DMS fine-tuning.
+\end{tablenotes}
+\end{table}
+
+\section{Conclusion and Future Work}\label{sec5}
+
+This study establishes ContVAR as a comprehensive, end-to-end pipeline for mutation-aware protein graph representation learning. By explicitly combining global structural graphs with localized mutation-site supervision under a three-phase metric learning framework, the system provides a mathematically sound and reproducible architecture.
+
+Future work will focus on executing the planned ablation studies to quantify the isolated contributions of the GO pretraining, the local projection branch, and the semi-hard mining strategy. Additionally, broader cross-family generalization checks and integration into the web-based GUI will finalize the deployment of the pipeline as a community-accessible bioinformatics tool.
+
+
+\section{Supporting Figures and Visual Diagnostics}\label{sec6}
+
+This section provides visual assets that support the interpretation of quantitative findings. The core figures are generated from project outputs and are aligned with the same split and checkpoint policy used in the main experiments.
+
+
+\begin{figure}[!t]%
+\centering
+{\color{black!20}\rule{213pt}{37pt}}
+\caption{Planned two-dimensional embedding map for validation split produced by the t-SNE visualization stage.}\label{fig1}
+\figalttext[t-SNE embedding projection]{Two-dimensional projection of validation embeddings showing relative placement of benign and pathogenic variants.}%
+\end{figure}
+
+\begin{figure*}[!t]%
+\centering
+{\color{black!20}\rule{\textwidth}{74pt}}
+\caption{Comparative panel for ablation settings (full model, no phase0, no local loss, no hard-mining refinement).}\label{fig2}
+\end{figure*}
+
+\begin{sidewaysfigure}%
+\centering
+{\color{black!20}\rule{\hsize}{102pt}}
+\caption{Epoch-level learning dynamics including train/validation loss and ranking-oriented metrics.}\label{fig3}
+\end{sidewaysfigure}
+
+
+\section{Execution Workflow and Implementation Snippets}\label{sec7}
+
+This section documents the executable training logic used in the project and its reporting-oriented abstraction.
+
+\begin{algorithm}[!t]
+\caption{ContVAR training and export workflow}\label{algo1}
+\begin{algorithmic}[1]
+\State Resolve runtime paths and configuration overrides
+\State Initialize model, optimizer, and loss functions
+\If{Phase0 GO pretraining is enabled}
+        \State Run ontology-aware semantic pretraining
+\EndIf
+\State Load DMS triplets with fixed train/validation/test protein split
+\For{each DMS training epoch (phase1/phase2)}
+        \State Build streaming semi-hard mining iterator
+        \State Compute global and local losses
+        \State Update parameters with accumulation and gradient clipping
+        \State Evaluate on validation split and update best checkpoint
+\EndFor
+\State Evaluate best checkpoint on held-out test split
+\State Export embeddings and generate t-SNE visualizations
+\end{algorithmic}
+\end{algorithm}
+
+\begin{minipage}{\hsize}%
+\lstset{language=Python}
+\begin{lstlisting}[frame=single,framexleftmargin=-1pt,framexrightmargin=-17pt,framesep=12pt,linewidth=0.98\textwidth]
+python starter.py
+# optional: python starter.py --force
+# phase0 + dms phases (phase1/phase2), then embedding export and t-SNE
+\end{lstlisting}
+\end{minipage}
+
+
+\section{Metric Interpretation and Citation Notes}\label{sec8}
+
+Cross-references in this report are used to connect quantitative tables, optimization equations, and qualitative figures. Equation~\ref{eq1} and Equation~\ref{eq2} define the optimization objectives, Table~\ref{tab1} presents metric reporting format, and Figure~\ref{fig1}--Figure~\ref{fig3} summarize embedding and training dynamics.
+
+\subsection{Reference Mapping for Method Choices}\label{subsec3}
+
+The bibliography is organized to cover deep learning foundations, graph attention architectures, and representation-learning methods relevant to mutation-aware protein modeling. Citations are used only where method choices and evaluation logic require explicit grounding in prior work.
+
+
+\section{Milestones and Deliverables}\label{sec9}
+
+The current project execution plan is summarized below:
+\begin{enumerate}[1.]
+\item Complete baseline training and checkpointed evaluation on fixed splits.
+\item Execute ablation matrix for phase0, local loss, and hard-mining policy.
+\item Consolidate metric tables and qualitative figures.
+\item Finalize manuscript language and submission-level formatting.
+\end{enumerate}
+
+Main technical deliverables of this phase are:
+\begin{itemize}
+\item reproducible training scripts and configuration paths,
+\item stage-wise checkpoints and export artifacts,
+\item quantitative logs and qualitative embedding visualizations.
+\end{itemize}
+
+\begin{boxtext}[Project risk summary]
+Current risks are primarily experimental rather than architectural: metric variance across difficult negative pools, incomplete ablation matrix at this stage, and pending reruns for final confidence intervals.
+
+\section{Supplementary Risk Notes}
+Mitigation strategy is to preserve fixed split definitions, keep checkpoint-level reproducibility logs, and prioritize ablations in a predefined order so that draft-to-draft comparisons remain consistent.
+
+\subsection{Operational Controls}
+For each run, the same metric bundle (Loss, MRR, Alignment, Uniformity) is tracked at batch, epoch, and best-checkpoint levels. Exported embeddings and plots are retained as supporting artifacts.
+
+\subsubsection{Near-Term Action Plan} 
+The immediate next technical step is to finalize controlled ablations and populate all summary tables with consistent rerun statistics. This will convert the current methodology-complete draft into a quantitatively complete final report.
+\end{boxtext}
+
+
+\section{Technical Validation Statements}\label{sec10}
+
+
+\begin{theorem}[Model selection rule]\label{thm1}
+Given fixed train/validation/test splits, selecting the checkpoint with minimum validation loss and evaluating the same checkpoint on the held-out test set yields a consistent model comparison protocol across ablations.
+\end{theorem}
+
+This rule is the default reporting policy in the current project stage.
+
+\begin{proposition}
+Streaming semi-hard mining improves the informativeness of negatives compared with naive random sampling under the same batch budget.
+\end{proposition}
+
+\begin{example}
+When local loss is removed while keeping the same backbone and mining setup, ranking quality is expected to decrease for mutations with highly localized structural impact.
+\end{example}
+
+\begin{remark}
+These theorem-like statements are included as structured validation claims and are linked to ablation runs rather than formal mathematical proofs.
+\end{remark}
+
+This proposition is evaluated empirically through planned ablation runs and ranking metrics.
+
+\begin{definition}[Ablation-consistent comparison]
+An ablation-consistent comparison is defined as an experiment set where data splits, evaluation metrics, checkpoint policy, and random-seed reporting remain fixed while only one methodological component is changed.
+\end{definition}
+
+\begin{proof}The report enforces fixed split files and best-validation checkpoint selection for all runs. Under this constraint, observed differences between model variants can be attributed to the changed component rather than evaluation drift.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~{\upshape\ref{thm1}}]
+Theorem~\ref{thm1} follows from the model selection protocol implemented in the training script: at each run, minimum validation loss determines the selected checkpoint, and the same checkpoint is used for final test evaluation.
+\end{proof}
+
+\begin{quote}
+The study is currently infrastructure-complete and experiment-progressive: the modeling and evaluation stack is finalized, and numeric consolidation is ongoing through controlled reruns.
+\end{quote}
+
+\section{Administrative and Project Statements}
+
+This report delivers a complete draft for the current project stage and documents the finalized model pipeline, training strategy, evaluation protocol, and reporting structure. The remaining work is focused on finishing comparative experiment runs and integrating their finalized numeric outcomes into the existing tables and figures.
+
+\section{Conflicts of interest}
+The authors declare that they have no competing interests.
+
+\section{Funding}
+This work is supported by the corresponding TUBITAK-funded graduation project scope and institutional computational resources.
+
+\section{Data availability}
+Data and generated artifacts are maintained within the project repository and associated local experiment outputs. Access and public sharing policy will follow supervisor and institutional approval.
+
+\section{Author contributions statement}
+All listed authors contributed to project planning, model development, experimental design, and manuscript preparation. Final author-specific role mapping will be confirmed before submission.
+
+\section{Acknowledgments}
+The authors thank their academic advisors and project collaborators for technical guidance throughout model development and evaluation.
+
+
+\begin{thebibliography}{10}
+
+\bibitem[Bahdanau et al.(2014)]{bahdanau2014neural}
+Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio.
+\newblock Neural machine translation by jointly learning to align and translate.
+\newblock {\em arXiv preprint arXiv:1409.0473}, 2014.
+
+\bibitem[Horvath and Raj(2018)]{horvath2018dna}
+Steve Horvath and Kenneth Raj.
+\newblock Dna methylation-based biomarkers and the epigenetic clock theory of ageing.
+\newblock {\em Nature Reviews Genetics}, 19(6):371, 2018.
+
+\bibitem[Imboden et al.(2018)]{imboden2018cardiorespiratory}
+Mary~T Imboden, Matthew~P Harber, Mitchell~H Whaley, W~Holmes Finch, Derron~L Bishop, and Leonard~A Kaminsky.
+\newblock Cardiorespiratory fitness and mortality in healthy men and women.
+\newblock {\em Journal of the American College of Cardiology}, 72(19):2283--2292, 2018.
+
+\bibitem[Ji et al.(2012)]{ji20123d}
+Shuiwang Ji, Wei Xu, Ming Yang, and Kai Yu.
+\newblock 3d convolutional neural networks for human action recognition.
+\newblock {\em IEEE Transactions on Pattern Analysis and Machine Intelligence}, 35(1):221--231, 2012.
+
+\bibitem[Krizhevsky et al.(2012)]{krizhevsky2012imagenet}
+Alex Krizhevsky, Ilya Sutskever, and Geoffrey~E Hinton.
+\newblock Imagenet classification with deep convolutional neural networks.
+\newblock In {\em Advances in Neural Information Processing Systems}, pages 1097--1105, 2012.
+
+\bibitem[LeCun et al.(2015)]{lecun2015deep}
+Yann LeCun, Yoshua Bengio, and Geoffrey Hinton.
+\newblock Deep learning.
+\newblock {\em Nature}, 521(7553):436, 2015.
+
+\bibitem[Motiian et al.(2017)]{motiian2017unified}
+Saeid Motiian, Marco Piccirilli, Donald~A Adjeroh, and Gianfranco Doretto.
+\newblock Unified deep supervised domain adaptation and generalization.
+\newblock In {\em Proceedings of the IEEE International Conference on Computer Vision}, pages 5715--5725, 2017.
+
+\bibitem[Murphy(2012)]{murphy2012machine}
+Kevin~P Murphy.
+\newblock {\em Machine learning: A probabilistic perspective}.
+\newblock MIT press, 2012.
+
+\bibitem[American College of Sports Medicine et al.(2013)]{american2013acsm}
+American~College of~Sports~Medicine et~al.
+\newblock {\em ACSM's guidelines for exercise testing and prescription}.
+\newblock Lippincott Williams \& Wilkins, 2013.
+
+\bibitem[Pyrkov et al.(2018)]{pyrkov2018quantitative}
+Timothy~V Pyrkov, Evgeny Getmantsev, Boris Zhurov, Konstantin Avchaciov, Mikhail Pyatnitskiy, Leonid Menshikov, Kristina Khodova, Andrei~V Gudkov, and Peter~O Fedichev.
+\newblock Quantitative characterization of biological age and frailty based on locomotor activity records.
+\newblock {\em Aging (Albany NY)}, 10(10):2973, 2018.
+
+\bibitem[Rahman and Adjeroh(2019)]{rahman2019centroidb}
+Syed~Ashiqur Rahman and Donald Adjeroh.
+\newblock Centroid of age neighborhoods: A generalized approach to estimate biological age.
+\newblock In {\em 2019 IEEE EMBS International Conference on Biomedical \& Health Informatics (BHI)}, pages 1--4. IEEE, 2019.
+
+\bibitem[Rav{\`\i} et al.(2016)]{ravi2016deep}
+Daniele Rav{\`\i}, Charence Wong, Fani Deligianni, Melissa Berthelot, Javier Andreu-Perez, Benny Lo, and Guang-Zhong Yang.
+\newblock Deep learning for health informatics.
+\newblock {\em IEEE {J}ournal of {B}iomedical and {H}ealth {I}nformatics}, 21(1):4--21, 2016.
+
+\bibitem[Wang et al.(2018)]{wang2018face}
+Zongwei Wang, Xu~Tang, Weixin Luo, and Shenghua Gao.
+\newblock Face aging with identity-preserved conditional generative adversarial networks.
+\newblock In {\em Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition}, pages 7939--7947, 2018.
+
+\bibitem[Zhang et al.(2018)]{zhang2018fine}
+Ke~Zhang, Na~Liu, Xingfang Yuan, Xinyao Guo, Ce~Gao, and Zhenbing Zhao.
+\newblock Fine-grained age estimation in the wild with attention {LSTM} networks.
+\newblock {\em arXiv preprint arXiv:1805.10445}, 2018.
+
+\end{thebibliography}
+
+%UNCOMMENT THE BELOW TWO LINES IN CASE YOU NEED NUMBERED FORMAT.
+%\bibliographystyle{oup-plain}
+%\bibliography{reference}
+
+%UNCOMMENT THE BELOW TWO LINES IN CASE YOU NEED AUTHOR YEAR FORMAT.
+%\bibliographystyle{oup-abbrvnat}
+%\bibliography{reference}
+
+%% sample for biography with author's image
+\begin{biography}{{\color{black!20}\rule{77pt}{57pt}}}{\author{Author 1.} Research focus includes graph-based representation learning, mutation effect modeling, and deep learning applications in computational biology.}
+\end{biography}
+
+%% sample for biography without author's image
+\begin{biography}{}{\author{Author 2.} Contributed to dataset preparation, training pipeline execution, experimental tracking, and technical manuscript development.}
+\end{biography}
+
+%%%%%%%%%%%%%%
+
+\begin{appendices}
+
+\section{Appendix A: Dataset and Split Artifacts}\label{sec11}
+
+This appendix summarizes dataset partition artifacts used in all reported runs. The primary split definitions are stored in project JSON files and separate the data into train, validation, and test partitions at protein level to reduce leakage.
+
+\subsection{Split Configuration Summary}\label{subsec4}
+
+The DMS split file controls phase1/phase2 DMS partitions, while the GO split file controls phase0 semantic pretraining subsets. All ablation and baseline runs in this report use the same split artifacts to keep model comparisons consistent.
+
+\subsubsection{Supplementary Figure Notes}\label{subsubsec3}
+
+Supplementary figure slots in this section are reserved for internal diagnostics such as per-family embedding scatter or split-wise distribution checks.
+
+\begin{figure}[!h]
+\centering
+{\color{black!20}\rule{85pt}{92pt}}
+\end{figure}
+
+When included, these diagnostics are interpreted together with main-text metrics and are not used as standalone evidence.
+
+\section{Appendix B: Reproducibility and Run Controls}\label{sec12}%
+
+This appendix records operational controls used to ensure reproducibility. The controls include fixed split files, deterministic path resolution, checkpoint retention policy, and standardized metric aggregation.
+
+\begin{figure}[b]
+\centering
+{\color{black!20}\rule{217pt}{120pt}}
+\caption{Appendix figure for additional qualitative embedding diagnostics.\label{fig4}}
+\end{figure}
+
+\begin{table}[t]%
+\begin{center}
+\begin{minipage}{.52\columnwidth}
+\caption{Appendix table for extended experiment logs and seed-wise variance.\label{tab4}}%
+\tabcolsep16pt
+\begin{tabular}{@{\extracolsep\fill}lcc@{}}%
+\toprule
+Artifact & Description & Scope \\
+\midrule
+`dms_protein_split.json` & Phase1/Phase2 split mapping & Train/Val/Test \\
+`phase0_protein_split_*.json` & GO phase split mapping & Train/Val/Test \\
+Checkpoint pair & Best + last model snapshots & Per run \\
+\botrule
+\end{tabular}
+\end{minipage}
+\end{center}
+\end{table}
+
+\subsection{Run Management Protocol}\label{subsec5}
+
+This appendix subsection records additional run-control notes that are useful during review but do not need to appear in the main narrative. These notes include seed policy, split file verification, run naming conventions, and checkpoint traceability practices used during experiment management.
+
+All experiments reported in the main text are tied to fixed split files and best-validation checkpoint selection. This ensures that metric comparisons remain consistent when ablations are performed.
+
+\subsubsection{Additional Implementation Notes}\label{subsubsec4}
+
+This subsection is reserved for additional implementation details that are not critical to the main narrative but may support reproducibility and technical review.
+
+
+Representative objective identity used in both main text and logs:
+\begin{align}
+ \mathcal{L}_{total} &= \frac{1}{2}\left(\mathcal{L}_{global}+\mathcal{L}_{local}\right), \label{1eq:hybobo:pfromgH} \\
+ \mathcal{L}_{global} &= \max\left(0,d(z_a^g,z_p^g)-d(z_a^g,z_n^g)+m\right). \label{2eq:hybobo:tfromgH}
+\end{align}
+
+\section{Appendix C: Extended Experiment Log Structure}\label{sec13}%
+
+This appendix section contains extended notes intended for internal review and supervisor feedback. It summarizes reproducibility checks, experiment naming rules, and artifact organization used throughout the project.
+
+\begin{equation}
+\mathcal{L}_{total}=\frac{1}{2}\left(\mathcal{L}_{global}+\mathcal{L}_{local}\right)
+\label{eq26}
+\end{equation}
+
+Run outputs are grouped by stage and split, and each finalized report table references only best-validation checkpoints. Embedding export files and visualization outputs are archived together with run metadata so that qualitative findings can be traced to the same numeric summaries reported in the manuscript.
+
+\begin{table}
+\begin{center}
+\begin{minipage}{.52\columnwidth}
+\caption{}{%
+\begin{tabular}{@{\extracolsep\fill}lcc}%
+\toprule
+Run group & Artifact type & Status \\
+\midrule
+DMS phase best & Checkpoint + metrics & Completed \\
+Ablations & Metrics + comparisons & In progress \\
+Visualization & t-SNE + curve plots & Completed \\
+\botrule
+\end{tabular}}{}
+\end{minipage}
+\end{center}
+\end{table}
+
+\end{appendices}
+
+
+\end{document}

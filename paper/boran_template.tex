@@ -93,7 +93,7 @@ Encoder and decoder use different supervision signals---DMS-driven contrastive g
 
 \textbf{GO annotation / decoder track.} The supervised decoder uses the same UniRef50-aware protein universe and train/validation/test assignment as phase~0, but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations~\cite{uniprot2023,geneontology2021} provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels, and one decoder is trained independently for each ontology. Thus, phase~0 and the decoder share the same protein split by identity, while differing in supervision format: phase~0 uses semantic-similarity triplets, whereas the decoder uses GO multi-hot label vectors.
 
-\textbf{GO function-change cohort.} Because no directly usable dataset links protein variants to GO-level loss- or gain-of-function effects, we constructed a curated cohort from UniProt Swiss-Prot \texttt{variant} and \texttt{mutagenesis} feature descriptions. The cohort converts free-text experimental descriptions into atomic variant--GO effect records with a signed effect label (LOSS or GAIN). After description filtering, GO matching, manual rule-based cleanup, and project-specific sequence-length filtering, the final cohort used in ContVAR contains 6,159 proteins, 17,442 variants, and 18,126 variant--GO term matches.
+\textbf{GO function-change cohort.} Because no directly usable dataset links protein variants to GO-level loss- or gain-of-function effects, we constructed a curated cohort from UniProt Swiss-Prot \texttt{variant} and \texttt{mutagenesis} feature descriptions. The cohort converts free-text experimental descriptions into atomic variant--GO effect records with a signed effect label (LOSS or GAIN). After description filtering, GO matching, manual rule-based cleanup, and project-specific sequence-length filtering, the final cohort used in ContVAR contains 6,117 proteins; 17,359 variants; 18,126 variant--GO term matches.
 
 \textbf{Structure interchange vs.\ cached graphs.} CIF/mmCIF is the portable format for atomic coordinates; serialized graph tensors cache parsing, featurization, and edge construction for reuse.
 
@@ -116,7 +116,7 @@ Each atomic description was then assigned an effect category using rule-based le
 
 For GO term assignment, each remaining atomic description and all candidate GO terms were embedded with SciBERT~\cite{beltagy2019scibert}. Matching was performed in two passes. First, each variant description was matched against the wild-type protein's existing GO annotations, using the highest cosine-similarity GO term when the similarity was at least 0.87. Second, descriptions without an acceptable wild-type annotation match were searched against the full GO term pool with a stricter minimum similarity of 0.90. Although this full-pool fallback was initially intended for gain-of-function descriptions, it was also applied to loss-of-function descriptions because some experimentally described lost functions were absent from the wild-type annotation set. Descriptions still unmatched after embedding search were passed to an LLM together with the ten nearest GO terms by embedding similarity; the LLM selected a term only when one of the candidates expressed the described function, otherwise the record was discarded.
 
-Localization records were finally converted into signed LOSS or GAIN labels according to directionality. For example, increased nuclear localization was treated as gain of the corresponding localization term, whereas decreased localization to the nucleus was treated as loss. We also corrected systematic embedding errors in which amino-acid or nucleic-acid specificity dominated the match incorrectly. Cases such as an alanine-related description matching a serine-specific GO term, or tRNA-related descriptions matching rRNA-specific terms, were detected rule-wise and replaced by the appropriate parent GO term (e.g.\ RNA acetylation rather than a mismatched RNA-species-specific child). Lastly, a small set of overly general GO terms that produced many high-similarity false matches, such as enzyme inhibitor activity, was identified during manual inspection and all of their matches were removed, eliminating approximately 1,000 records. For compatibility with SALAD~\cite{jendrusch2025salad} and downstream AlphaFold structure prediction, we retained only proteins with sequence length between 49 and 1,280 residues, yielding the final 6,159-protein, 17,442-variant, 18,126-match cohort.
+Localization records were finally converted into signed LOSS or GAIN labels according to directionality. For example, increased nuclear localization was treated as gain of the corresponding localization term, whereas decreased localization to the nucleus was treated as loss. We also corrected systematic embedding errors in which amino-acid or nucleic-acid specificity dominated the match incorrectly. Cases such as an alanine-related description matching a serine-specific GO term, or tRNA-related descriptions matching rRNA-specific terms, were detected rule-wise and replaced by the appropriate parent GO term (e.g.\ RNA acetylation rather than a mismatched RNA-species-specific child). Lastly, a small set of overly general GO terms that produced many high-similarity false matches, such as enzyme inhibitor activity, was identified during manual inspection and all of their matches were removed, eliminating approximately 1,000 records. For compatibility with SALAD~\cite{jendrusch2025salad} and downstream AlphaFold structure prediction, we retained only proteins with sequence length between 49 and 1,280 residues, yielding the final 6,117-protein, 17,359-variant, 18,126-match cohort.
 
 \subsubsection{Hybrid residue-graph connectivity}
 \label{sec:hybrid-graph}
@@ -329,10 +329,10 @@ Before encoder training, we compared AFDB AF2, in-house AF3, and ColabFold AF2 w
 Decoder comparisons use five \emph{embedding sources} for the same \texttt{FFNDecoder} architecture and training recipe (UniRef50 cluster-aware splits; thresholded metrics at the F1-optimal probability threshold, swept 0.05--0.95):
 \begin{itemize}
     \item \textbf{ESM-2 baseline:} raw 650M ESM-2 protein embeddings (1{,}280-d), no ContVAR encoder.
-    \item \textbf{Phase-0 encoder:} GO-pretrained encoder only, without phase~1 DMS fine-tuning (256-d).
-    \item \textbf{ESM-2 + Phase-0:} concatenation of ESM-2 and phase-0-only encoder embeddings (1{,}536-d).
-    \item \textbf{ContVAR (full):} encoder after phase~0 and phase~1 (256-d graph embeddings).
-    \item \textbf{ESM-2 + ContVAR:} concatenation of ESM-2 and full ContVAR encoder embeddings (1{,}536-d).
+    \item \textbf{Phase-0 GO pretraining:} GO-pretrained encoder only, without phase~1 DMS fine-tuning (256-d).
+    \item \textbf{ESM-2 + Phase-0 GO pretraining:} concatenation of ESM-2 and phase-0-only encoder embeddings (1{,}536-d).
+    \item \textbf{Phase-1 DMS specialization:} encoder after phase~0 and phase~1 (256-d graph embeddings).
+    \item \textbf{ESM-2 + Phase-1 DMS specialization:} concatenation of ESM-2 and full ContVAR encoder embeddings (1{,}536-d).
 \end{itemize}
 
 \subsection{Encoder: phase~0 (GO pretraining)}
@@ -402,7 +402,7 @@ Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table
  & \multirow{2}{*}{CC} & Val  & 0.5895 & 0.5377 & 0.5503 & 0.5809 & 0.5496 \\
  &  & Test & 0.5878 & 0.5319 & 0.5443 & 0.5701 & 0.5428 \\
 \midrule
-\multirow{6}{*}{\parbox{2.2cm}{\raggedright Phase-0 encoder}}
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright Phase-0 GO pretraining}}
  & \multirow{2}{*}{MF} & Val  & 0.7214 & 0.6555 & 0.6669 & 0.6976 & 0.6676 \\
  &  & Test & 0.6971 & 0.6344 & 0.6437 & 0.6788 & 0.6465 \\
 \decaspectsep
@@ -412,7 +412,7 @@ Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table
  & \multirow{2}{*}{CC} & Val  & 0.5469 & 0.4948 & 0.5089 & 0.5341 & 0.5061 \\
  &  & Test & 0.5425 & 0.5006 & 0.5551 & 0.4992 & 0.5120 \\
 \midrule
-\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 + Phase-0}}
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 + Phase-0 GO pretraining}}
  & \multirow{2}{*}{MF} & Val  & 0.7412 & 0.6760 & 0.6856 & 0.7192 & 0.6879 \\
  &  & Test & 0.7253 & 0.6543 & 0.6708 & 0.6922 & 0.6666 \\
 \decaspectsep
@@ -422,7 +422,7 @@ Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table
  & \multirow{2}{*}{CC} & Val  & 0.5883 & 0.5420 & 0.5732 & 0.5616 & 0.5529 \\
  &  & Test & 0.5857 & 0.5402 & 0.5656 & 0.5631 & 0.5505 \\
 \midrule
-\multirow{6}{*}{\parbox{2.2cm}{\raggedright ContVAR (full)}}
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright Phase-1 DMS specialization}}
  & \multirow{2}{*}{MF} & Val  & 0.6989 & 0.6329 & 0.6649 & 0.6554 & 0.6453 \\
  &  & Test & 0.6766 & 0.6089 & 0.6202 & 0.6549 & 0.6218 \\
 \decaspectsep
@@ -432,7 +432,7 @@ Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table
  & \multirow{2}{*}{CC} & Val  & 0.5152 & 0.4754 & 0.4955 & 0.5081 & 0.4864 \\
  &  & Test & 0.5174 & 0.4795 & 0.5181 & 0.4959 & 0.4912 \\
 \midrule
-\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 + ContVAR}}
+\multirow{6}{*}{\parbox{2.2cm}{\raggedright ESM-2 + Phase-1 DMS specialization}}
  & \multirow{2}{*}{MF} & Val  & 0.7356 & 0.6703 & 0.6889 & 0.7036 & 0.6821 \\
  &  & Test & 0.7227 & 0.6558 & 0.6584 & 0.7097 & 0.6685 \\
 \decaspectsep
@@ -447,6 +447,87 @@ Wild-type proteins are scored with one decoder per GO aspect (MF, BP, CC). Table
 
 \paragraph{Decoder discussion.}
 Across MF, BP, and CC, wild-type GO prediction is dominated by ESM-2 sequence embeddings rather than graph-only representations. On test mAP, ESM-2 alone is best for MF (0.730) and CC (0.588); BP peaks with ESM-2\,+\,Phase-0 (0.449), with ESM-2 alone and ESM-2\,+\,ContVAR within one point. Concatenating ESM-2 with either phase-0-only or full ContVAR embeddings consistently improves over the corresponding 256-d graph encoder used in isolation, but does not uniformly beat raw ESM-2---suggesting that the decoder stage still relies heavily on pretrained sequence features while graph metric learning supplies an additional, aspect-dependent signal. ContVAR (full), despite strong phase~0 semantic organization and phase~1 DMS specialization in encoder space, yields the lowest decoder mAP on all three aspects (e.g.\ MF test 0.677 vs.\ 0.730 for ESM-2), which is consistent with DMS fine-tuning optimizing family-level variant discrimination rather than bulk GO term recovery on UniRef50-annotated wild types. Val--test gaps are small for every condition, indicating stable generalization under the cluster-aware split rather than a single incomplete ablation.
+
+\subsection{GO function-change cohort results}
+The GO function-change cohort evaluates the complete variant interpretation setting described in Section~\ref{sec:decoder}: wild-type GO annotations define the reference functional background, and variant embeddings are decoded into term-level GAIN / LOSS / NEUTRAL calls. We report two complementary evaluations. First, Table~\ref{tab:wt-embedding-results} measures how well each embedding source recovers wild-type GO annotations for proteins represented in the GO function-change cohort. Second, Table~\ref{tab:go-function-change-results} compares predicted signed variant effects against the curated GOF/LOF labels at the variant--GO-term level.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.08}
+\caption{Embedding-source comparison on wild-type GO annotation across GO aspects in the GO function-change cohort. Rows are grouped by embedding source.}
+\label{tab:wt-embedding-results}
+\begin{tabular}{@{}l l ccccc@{}}
+\toprule
+\textbf{Embedding source} & \textbf{Aspect} & mAP & F1 & Prec. & Rec. & MCC \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright ESM-2 baseline}} & MF & 0.9260 & 0.8894 & 0.8977 & 0.9034 & 0.8945 \\
+ & BP & 0.2062 & 0.0924 & 0.0836 & 0.2118 & 0.1121 \\
+ & CC & 0.8854 & 0.8301 & 0.8294 & 0.8632 & 0.8371 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright Phase-0 GO pretraining}} & MF & 0.9353 & 0.9030 & 0.9336 & 0.8919 & 0.9075 \\
+ & BP & 0.8595 & 0.8121 & 0.8312 & 0.8324 & 0.8213 \\
+ & CC & 0.8908 & 0.8430 & 0.8768 & 0.8398 & 0.8496 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright ESM-2 + Phase-0 GO pretraining}} & MF & 0.9388 & 0.9071 & 0.9196 & 0.9130 & 0.9113 \\
+ & BP & 0.8689 & 0.8177 & 0.8246 & 0.8488 & 0.8266 \\
+ & CC & 0.8946 & 0.8437 & 0.8452 & 0.8726 & 0.8503 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright Phase-1 DMS specialization}} & MF & 0.9239 & 0.8904 & 0.9063 & 0.8958 & 0.8952 \\
+ & BP & 0.8628 & 0.8218 & 0.8425 & 0.8387 & 0.8306 \\
+ & CC & 0.8799 & 0.8378 & 0.8441 & 0.8610 & 0.8441 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright ESM-2 + Phase-1 DMS specialization}} & MF & 0.9198 & 0.8744 & 0.8869 & 0.8876 & 0.8803 \\
+ & BP & 0.8678 & 0.8193 & 0.8261 & 0.8501 & 0.8281 \\
+ & CC & 0.8902 & 0.8404 & 0.8440 & 0.8679 & 0.8471 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\renewcommand{\arraystretch}{1.12}
+\caption{Performance comparison across GO aspects for gain/loss GO-term prediction in the GO function-change cohort. Rows are grouped by embedding source. In addition to positive-class metrics, specificity, negative predictive value (NPV), negative-class F1, and MCC are reported to better reflect behavior under class imbalance.}
+\label{tab:go-function-change-results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llcccccccc@{}}
+\toprule
+\textbf{Embedding source} & \textbf{Aspect} & \textbf{Acc.} & \textbf{F1} & \textbf{Prec.} & \textbf{Rec.} & \textbf{Spec.} & \textbf{NPV} & \textbf{Neg. F1} & \textbf{MCC} \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright ESM-2 baseline}}
+& MF & 0.6304 & 0.1228 & 0.0770 & 0.3029 & 0.6609 & 0.9104 & 0.7659 & -0.0214 \\
+& BP & 0.7008 & 0.1844 & 0.1250 & 0.3515 & 0.7380 & 0.9144 & 0.8168 & 0.0594 \\
+& CC & 0.4992 & 0.5293 & 0.6653 & 0.4395 & 0.6056 & 0.3772 & 0.4649 & 0.0438 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright Phase-0 GO pretraining}}
+& MF & 0.8342 & 0.0738 & 0.0703 & 0.0777 & 0.9045 & 0.9135 & 0.9090 & -0.0170 \\
+& BP & 0.7979 & 0.1039 & 0.0909 & 0.1213 & 0.8702 & 0.9026 & 0.8861 & -0.0074 \\
+& CC & 0.4890 & 0.4811 & 0.6931 & 0.3684 & 0.7062 & 0.3830 & 0.4967 & 0.0753 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright ESM-2 + Phase-0 GO pretraining}}
+& MF & 0.6763 & 0.1157 & 0.0753 & 0.2490 & 0.7160 & 0.9112 & 0.8019 & -0.0217 \\
+& BP & 0.7656 & 0.1761 & 0.1333 & 0.2594 & 0.8197 & 0.9119 & 0.8633 & 0.0598 \\
+& CC & 0.4721 & 0.4984 & 0.6405 & 0.4079 & 0.5877 & 0.3553 & 0.4429 & -0.0043 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright Phase-1 DMS specialization}}
+& MF & 0.6253 & 0.1162 & 0.0727 & 0.2899 & 0.6565 & 0.9087 & 0.7623 & -0.0316 \\
+& BP & 0.6621 & 0.1772 & 0.1158 & 0.3766 & 0.6926 & 0.9122 & 0.7874 & 0.0440 \\
+& CC & 0.4941 & 0.5477 & 0.6441 & 0.4763 & 0.5261 & 0.3581 & 0.4261 & 0.0023 \\
+\midrule
+\multirow{3}{*}{\parbox{2.6cm}{\raggedright ESM-2 + Phase-1 DMS specialization}}
+& MF & 0.6121 & 0.1288 & 0.0796 & 0.3373 & 0.6377 & 0.9119 & 0.7505 & -0.0146 \\
+& BP & 0.6649 & 0.1784 & 0.1169 & 0.3766 & 0.6957 & 0.9126 & 0.7895 & 0.0461 \\
+& CC & 0.4822 & 0.5049 & 0.6555 & 0.4105 & 0.6114 & 0.3654 & 0.4574 & 0.0214 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\paragraph{GO function-change discussion.}
+\textit{[Placeholder.]} This section should discuss the contrast between strong wild-type annotation recovery in Table~\ref{tab:wt-embedding-results} and weaker signed GOF/LOF agreement in Table~\ref{tab:go-function-change-results}, with attention to class imbalance, ontology-specific behavior, and the fact that variant-level GO function change is a harder task than recovering wild-type GO background.
 
 \subsection{Additional ablations and analyses}
 Beyond Table~\ref{tab:decoder-ablation}, further encoder-side comparisons (hybrid vs.\ $k$NN edges, GO-pretrained vs.\ random-init encoder before phase~1, global-only vs.\ local-only vs.\ joint $\mathcal{L}_g+\mathcal{L}_l$, and mining strategy) and decoder-side threshold sensitivity around 0.95 are natural extensions of the present benchmark but were not required to establish the main embedding-source trends reported here.
