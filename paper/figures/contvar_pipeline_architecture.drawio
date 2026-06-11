@@ -159,19 +159,17 @@
         <mxCell id="C_z" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;fontSize=20;align=center;spacing=8;" value="&lt;b&gt;z&lt;sub&gt;var&lt;/sub&gt; ∈ ℝ&lt;sup&gt;256&lt;/sup&gt;&lt;/b&gt;&lt;br&gt;(frozen encoder)" vertex="1">
           <mxGeometry height="100" width="280" x="100" y="1660" as="geometry" />
         </mxCell>
-        <mxCell id="C_l1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=20;align=center;spacing=6;" value="&lt;b&gt;Linear 256 → 512&lt;/b&gt;&lt;br&gt;BatchNorm · ReLU · Dropout p=0.3" vertex="1">
+        <mxCell id="C_l1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=20;align=center;spacing=6;" value="&lt;b&gt;Linear 256 → 1024&lt;/b&gt;&lt;br&gt;BatchNorm · ReLU · Dropout p=0.2" vertex="1">
           <mxGeometry height="100" width="500" x="450" y="1660" as="geometry" />
         </mxCell>
-        <mxCell id="C_l2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=20;align=center;spacing=6;" value="&lt;b&gt;Linear 512 → 1024&lt;/b&gt;&lt;br&gt;BatchNorm · ReLU · Dropout" vertex="1">
+        <mxCell id="C_l2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=20;align=center;spacing=6;" value="&lt;b&gt;Linear 1024 → 512&lt;/b&gt;&lt;br&gt;BatchNorm · ReLU · Dropout p≈0.13" vertex="1">
           <mxGeometry height="100" width="500" x="450" y="1790" as="geometry" />
         </mxCell>
-        <mxCell id="C_l3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=20;align=center;spacing=6;" value="&lt;b&gt;Linear 1024 → 512&lt;/b&gt;&lt;br&gt;BatchNorm · ReLU · Dropout p≈0.2" vertex="1">
-          <mxGeometry height="100" width="500" x="450" y="1920" as="geometry" />
-        </mxCell>
+
         <mxCell id="C_lout" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;fontSize=20;align=center;spacing=6;" value="&lt;b&gt;Linear 512 → |V&lt;sub&gt;GO&lt;/sub&gt;|&lt;/b&gt; (+ NULL_FUNCTION)&lt;br&gt;σ(logits) → s ∈ [0,1]&lt;sup&gt;C&lt;/sup&gt;" vertex="1">
           <mxGeometry height="120" width="500" x="450" y="2050" as="geometry" />
         </mxCell>
-        <mxCell id="C_loss" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=20;align=center;spacing=8;" value="&lt;b&gt;Training loss&lt;/b&gt;&lt;br&gt;weighted multi-label BCE&lt;br&gt;w&lt;sub&gt;c&lt;/sub&gt; = min((N−n&lt;sub&gt;c&lt;/sub&gt;&lt;sup&gt;+&lt;/sup&gt;)/(n&lt;sub&gt;c&lt;/sub&gt;&lt;sup&gt;+&lt;/sup&gt;+ε), 20)&lt;br&gt;NULL_FUNCTION × α=3.0" vertex="1">
+        <mxCell id="C_loss" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=20;align=center;spacing=8;" value="&lt;b&gt;Training loss&lt;/b&gt;&lt;br&gt;weighted multi-label BCE&lt;br&gt;w&lt;sub&gt;c&lt;/sub&gt; = min((N−n&lt;sub&gt;c&lt;/sub&gt;&lt;sup&gt;+&lt;/sup&gt;)/(n&lt;sub&gt;c&lt;/sub&gt;&lt;sup&gt;+&lt;/sup&gt;+ε), τ)&lt;br&gt;NULL_FUNCTION × α=3.0" vertex="1">
           <mxGeometry height="120" width="280" x="100" y="2050" as="geometry" />
         </mxCell>
         <mxCell id="C_wt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=20;align=center;spacing=8;" value="&lt;b&gt;WT GO labels&lt;/b&gt;&lt;br&gt;GOA lookup (not from decoder)" vertex="1">
@@ -189,12 +187,10 @@
         <mxCell id="eC2" edge="1" parent="1" source="C_l1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=3;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="C_l2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="eC3" edge="1" parent="1" source="C_l2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=3;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="C_l3">
+        <mxCell id="eC3" edge="1" parent="1" source="C_l2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=3;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="C_lout">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="eC4" edge="1" parent="1" source="C_l3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=3;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="C_lout">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
+
         <mxCell id="eC5" edge="1" parent="1" source="C_lout" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=3;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="C_rules">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>

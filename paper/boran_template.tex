@@ -79,7 +79,7 @@ Figure~\ref{fig:pipeline} summarizes the ContVAR pipeline in three panels: the e
   \caption{ContVAR pipeline and model architecture.
   \textbf{(A)}~End-to-end pipeline: AFDB (phase~0/decoder) and AF3 (phase~1 DMS) monomer structures together with frozen ESM-2 features build hybrid residue graphs ($\mathbf{x}_i \in \mathbb{R}^{1300}$, $\mathbf{e}_{ij} \in \mathbb{R}^{20}$, $k{=}16$ per neighbor type); the encoder is trained sequentially in two phases (phase~0 GO semantic triplets, phase~1 DMS contrastive with streaming semi-hard mining) and then frozen; protein-level embeddings $\mathbf{z} \in \mathbb{R}^{256}$ feed three per-aspect FFN decoders whose probabilities yield per-GO LOSS / GAIN / NEUTRAL calls.
   \textbf{(B)}~Encoder layer stack (\texttt{DeepProteinGAT}): node features $X \in \mathbb{R}^{N\times1300}$ and edge attributes $E \in \mathbb{R}^{|\mathcal{E}|\times20}$ are first projected by the \texttt{edge\_encoder} ($\mathbb{R}^{20}\!\to\!\mathbb{R}^{128}\!\to\!\mathbb{R}^{128}$); two residual edge-conditioned GATv2 layers (4 heads, $h{=}128$, 512-d node states, LayerNorm + ELU) produce $\mathbf{h}_i \in \mathbb{R}^{512}$ that branches into a global mean-pooled head and a mutation-site local head, each projecting to $\ell_2$-normalized $\mathbf{z}_g,\mathbf{z}_l \in \mathbb{R}^{256}$; phase~0 attaches three ontology heads (MF / BP / CC) trained with the semantic triplet loss $\mathcal{L}_{\text{GO}}$ ($m_{go}{=}0.2$), and phase~1 jointly minimizes the global triplet $\mathcal{L}_g$ and local pairwise contrastive $\mathcal{L}_l$ under streaming semi-hard mining, with $\mathcal{L}_{\text{total}}=(\mathcal{L}_g+\mathcal{L}_l)/2$.
-  \textbf{(C)}~Decoder and inference: \texttt{FFNDecoder} ($256\!\to\!512\!\to\!1024\!\to\!512\!\to\!|V_{\text{GO}}|$, BatchNorm / ReLU / Dropout) is trained per GO aspect with class-balanced multi-label BCE (\texttt{NULL\_FUNCTION} weighted by $\alpha{=}3$); at inference, $\sigma$-scored variant probabilities are joined with wild-type GO annotations from GOA, and per-term decisions ($\theta{=}0.1$) yield LOSS / GAIN / NEUTRAL labels per GO term.}
+\textbf{(C)}~Decoder and inference: \texttt{FFNDecoder} ($256\!\to\!1024\!\to\!512\!\to\!|V_{\text{GO}}|$, BatchNorm / ReLU / Dropout) is trained per GO aspect with class-balanced multi-label BCE (\texttt{NULL\_FUNCTION} weighted by $\alpha{=}3$); at inference, $\sigma$-scored variant probabilities are joined with wild-type GO annotations from GOA, and per-term decisions ($\theta{=}0.1$) yield LOSS / GAIN / NEUTRAL labels per GO term.}
   \label{fig:pipeline}
 \end{figure}
 
@@ -112,7 +112,7 @@ Node features concatenate a residue-identity one-hot and a per-residue ESM-2 emb
 \]
 ESM-2 (650M-parameter variant~\cite{lin2023evolutionary}) is chosen as the per-residue feature source because it produces high-quality sequence-contextualized representations without requiring multiple sequence alignment (MSA) construction at inference time. The embeddings are pre-computed and frozen throughout encoder training, so the GATv2 encoder learns mutation-sensitive spatial geometry on top of fixed evolutionary-chemical context rather than attempting to learn both from scratch.
 
-\textbf{Decoder label preparation.} After encoder training, protein-level graph embeddings are exported to H5 and matched to GOA annotations by UniProt identifier. For each ontology, annotations are converted into multi-hot vectors over GO terms observed in at least ten training proteins; a \texttt{NULL\_FUNCTION} output is appended to the vocabulary. Proteins without both an exported embedding and GOA annotation for the selected aspect are excluded from decoder training and evaluation.
+\textbf{Decoder label preparation.} After encoder training, protein-level graph embeddings are exported to H5 and matched to GOA annotations by UniProt identifier. For each ontology, annotations are converted into multi-hot vectors over GO terms observed in at least ten proteins; a \texttt{NULL\_FUNCTION} output is appended to the vocabulary. Proteins without both an exported embedding and GOA annotation for the selected aspect are excluded from decoder training and evaluation.
 
 \textbf{GO function-change cohort construction.} We first downloaded all Swiss-Prot \texttt{variant} and \texttt{mutagenesis} feature records. Since a single feature description can describe multiple functional consequences, descriptions were split into atomic statements. Descriptions matching deterministic syntactic patterns were split with rule-based rules; ambiguous multi-effect descriptions were split with an LLM. Statements describing only weak or uncertain effects were removed: descriptions containing qualitative modifiers such as ``slight'' or ``moderate'', or quantitative increase/decrease estimates below 50\%, were excluded. This filtering step retained 129,989 atomic descriptions.
 
@@ -256,13 +256,13 @@ Phase~1 training runs for 200 epochs by default. Optimizer: AdamW (learning rate
 The decoder consumes protein-level embeddings from the trained encoder (256 dimensions) or, in ablations, raw ESM-2 embeddings (1{,}280 dimensions) or their concatenation (1{,}536 dimensions). It outputs multi-label GO probabilities under Molecular Function (MF), Biological Process (BP), and Cellular Component (CC). One decoder is trained independently per aspect.
 
 \paragraph{GO annotation source and vocabulary.}
-Labels are taken from UniProt-GOA Swiss-Prot~\cite{uniprot2023,geneontology2021}, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten training proteins. A dedicated \texttt{NULL\_FUNCTION} class is appended to flag predicted complete loss of function.
+Labels are taken from UniProt-GOA Swiss-Prot~\cite{uniprot2023,geneontology2021}, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten proteins. Across the dataset, this threshold yields 3{,}258 Molecular Function (MF) terms, 8{,}336 Biological Process (BP) terms, and 1{,}577 Cellular Component (CC) terms. A dedicated \texttt{NULL\_FUNCTION} class is appended to each vocabulary to flag predicted complete loss of function.
 
 \paragraph{Dataset and UniRef50-aware splits.}
-Training proteins are partitioned by UniRef50 cluster so that no cluster appears in more than one of train, validation, or test. This same protein-level partition is used by phase~0 and by all three decoder aspects, and the DMS family split inherits it where the DMS protein is present in the UniRef50 mapping. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
+The decoder dataset encompasses 123{,}584 proteins grouped into 84{,}151 UniRef50 clusters. Proteins are partitioned by cluster into an 80\%/10\%/10\% split (67{,}320 train, 8{,}415 validation, and 8{,}416 test clusters) so that no cluster appears in more than one set. This same protein-level partition is used by phase~0 and by all three decoder aspects, and the DMS family split inherits it where the DMS protein is present in the UniRef50 mapping. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
 
 \paragraph{Architecture.}
-\texttt{FFNDecoder} is a feed-forward network. For the 256-d and 1{,}280-d inputs the hidden widths are $512 \to 1024 \to 512$; for the 1{,}536-d concatenated input they are $1024 \to 512$. Each hidden block applies batch normalization, ReLU activation, and dropout ($p=0.3$, tapered to $p \approx 0.2$ in the last hidden block). The head outputs logits per GO term; sigmoid is applied at inference.
+\texttt{FFNDecoder} is a feed-forward network. Each hidden block applies batch normalization, ReLU activation, and dropout (tapered by a factor of 0.67 in the last hidden block). The head outputs logits per GO term; sigmoid is applied at inference. Architecture hyperparameters---hidden widths, dropout rate, weight decay, and positive-weight clamp---are selected by a three-stage sequential grid search (described below), independently for each aspect$\times$embedding-type pair.
 
 \paragraph{Class-balanced multi-label loss.}
 Training uses binary cross-entropy with logits and positive-class weights. For GO term $c$,
@@ -270,10 +270,19 @@ Training uses binary cross-entropy with logits and positive-class weights. For G
 w_c \;=\; \min\!\left(\frac{N - n_c^{+}}{n_c^{+}+\varepsilon},\ \tau\right),\qquad
 w_{\text{NULL\_FUNCTION}} \;\leftarrow\; \alpha \cdot w_{\text{NULL\_FUNCTION}},
 \]
-where $n_c^{+}$ is the number of training proteins with term $c$, $N$ is the training set size, $\tau=20$, and $\alpha=3.0$.
+where $n_c^{+}$ is the number of training proteins with term $c$, $N$ is the training set size, and $\alpha=3.0$. The clamp $\tau$ is tuned in stage~3 of the grid search.
+
+\paragraph{Hyperparameter selection.}
+Decoder hyperparameters are tuned via a three-stage sequential grid search, run independently per aspect and embedding type, with each stage selecting the configuration maximizing validation mAP:
+\begin{enumerate}
+    \item \textbf{Stage~1} (learning rate $\times$ dropout): $\text{lr}\in\{2.5\!\times\!10^{-4},\,5\!\times\!10^{-4},\,10^{-3}\}$, $\text{dropout}\in\{0.2,\,0.3,\,0.4\}$ (9 runs).
+    \item \textbf{Stage~2} (architecture $\times$ weight decay): hidden widths $\in\{[512,512],\,[1024,512],\,[512,1024,512]\}$, weight decay $\in\{10^{-5},\,10^{-4},\,5\!\times\!10^{-4}\}$ (9 runs, seeded from stage~1 winner).
+    \item \textbf{Stage~3} (positive-weight clamp $\tau$): $\tau\in\{10,\,20,\,40\}$ (3 runs, seeded from stage~2 winner).
+\end{enumerate}
+Stages~1--3 each train for 30 epochs with patience 6. The winning configuration is then retrained in a final run for up to 100 epochs with patience 20. Across all evaluated conditions the grid search consistently selected $\text{lr}=10^{-3}$, $\text{dropout}=0.2$, and hidden widths $1024\!\to\!512$; weight decay and $\tau$ varied by embedding type (e.g.\ $\text{wd}=10^{-5}$, $\tau=10$ for ContVAR-only; $\text{wd}=10^{-4}$, $\tau=10$ for ESM-only).
 
 \paragraph{Optimization and schedule.}
-AdamW with learning rate $10^{-3}$ and weight decay $10^{-4}$; cosine annealing over 100 epochs; batch size 256. The best validation mAP checkpoint is kept; training stops if mAP fails to improve by more than $10^{-4}$ for ten consecutive epochs. Metrics are logged to Weights \& Biases.
+AdamW optimizer; cosine annealing over the epoch budget; batch size 256. The best validation mAP checkpoint is kept; training stops if mAP fails to improve by more than $10^{-4}$ for twenty consecutive epochs. Metrics are logged to Weights \& Biases.
 
 \paragraph{Decoder evaluation metrics.}
 Validation and test use logits converted to probabilities. GO terms with zero positives in a split are excluded from mAP. For thresholded metrics we sweep a probability grid from 0.05 to 0.95 in steps of 0.05 and select the threshold maximizing macro F1; at the selected threshold we report macro-averaged F1, precision, recall, subset accuracy, and MCC.
@@ -290,8 +299,7 @@ The decoder is run on \emph{variant} embeddings only; wild-type GO annotations a
 \]
 with default $\theta=0.1$. Variant outputs are therefore \emph{term-resolved} function-change calls rather than a single pooled score over all wild-type annotations.
 
-\paragraph{Batch variant scoring.}
-Variant embeddings are scored in batch; wild-type accessions and mutation tokens are parsed from record identifiers. Variants whose wild type lacks GOA coverage are skipped. Predicted LOSS / GAIN / NEUTRAL calls can be compared against curated variant--GO effect labels (e.g.\ the Swiss-Prot function-change cohort) or summarized as per-variant counts of each call type.
+
 
 \subsubsection{Interactive Hugging Face Space}
 \label{sec:hf-space}
