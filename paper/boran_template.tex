@@ -99,7 +99,7 @@ Encoder and decoder use different supervision signals---DMS-driven contrastive g
 
 \textbf{DMS (phase~1) track.} The mutagenesis corpus is organized by protein family with one wild-type anchor, multiple positives, and multiple negatives per family. Starting from the ProteinGym Deep Mutational Scanning benchmark~\cite{notin2023proteingym}, we retained proteins with sequence length at most 656 residues, giving 97 unique proteins. When an assay annotated only a protein segment, the corresponding full-length sequence was reconstructed and variant coordinates were remapped to the full-length residue index so that the graph encoder always received complete protein context. For each protein, the positive pool was built from 50 neutral variants selected immediately above the assay cutoff indicating retained-functionality while the negative pool used the 50 lowest-fitness score variants as deleterious examples; selection was sequence-position stratified to reduce clustering in a single domain or local region. Thus, the DMS dataset contains 9,700 curated variants in total ($97$ proteins $\times$ $100$ variants per protein) before graph construction. The DMS split respects the UniRef50-aware protein split used for phase~0 and decoder training: if a DMS protein is present in that split, the wild type and all of its variants inherit the same train/validation/test assignment; DMS proteins absent from the UniRef50 split are conservatively assigned to training. The resulting fixed DMS split contains 97 families (93 train, 2 validation, 2 test), preventing variant-level leakage across held-out protein families. Raw structures are consumed as mmCIF/CIF files, and per-residue ESM-2 embeddings are loaded from a precomputed store keyed by normalized protein identifiers. Mutated residue positions are parsed from variant filenames during collation and mining.
 
-\textbf{GO annotation / decoder track.} The supervised decoder uses the same 122,190-protein dataset and the same UniRef50-aware train/validation/test split as phase~0 (97,771 train, 12,093 validation, 12,326 test), but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations~\cite{uniprot2023,geneontology2021} provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels after excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. GO terms annotated in at least ten proteins are retained, yielding 3{,}258 MF terms, 8{,}336 BP terms, and 1{,}577 CC terms before appending a dedicated \texttt{NULL\_FUNCTION} output.
+\textbf{GO annotation / decoder track.} The supervised decoder uses the same 122,190-protein dataset and the same UniRef50-aware train/validation/test split as phase~0 (97,771 train, 12,093 validation, 12,326 test), but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations~\cite{uniprot2023,geneontology2021} provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels after excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. GO terms annotated in at least ten proteins are retained, yielding 3{,}257 MF terms, 8{,}335 BP terms, and 1{,}576 CC terms before appending a dedicated \texttt{NULL\_FUNCTION} output (3{,}258, 8{,}336, and 1{,}577 output classes per aspect, respectively).
 
 \textbf{GO function-change cohort.} Because no directly usable dataset links protein variants to GO-level loss- or gain-of-function effects, we constructed a curated cohort from UniProt Swiss-Prot \texttt{variant} and \texttt{mutagenesis} feature descriptions. The cohort converts free-text experimental descriptions into atomic variant--GO effect records with a signed effect label (LOSS or GAIN). After description filtering, GO matching, manual rule-based cleanup, and project-specific sequence-length filtering, the final cohort used in ContVAR contains 6,117 proteins; 17,359 variants; 18,126 variant--GO term matches.
 
@@ -299,7 +299,7 @@ Phase~1 training runs for 200 epochs by default. Optimizer: AdamW (learning rate
 The decoder consumes protein-level embeddings from the trained encoder (256 dimensions) or, in ablations, raw ESM-2 embeddings (1{,}280 dimensions) or their concatenation (1{,}536 dimensions). It outputs multi-label GO probabilities under Molecular Function (MF), Biological Process (BP), and Cellular Component (CC). One decoder is trained independently per aspect.
 
 \paragraph{Output vocabulary.}
-The decoder output dimensionality is set by the aspect-specific GO vocabularies prepared in the GO annotation / decoder track described above: 3{,}258 Molecular Function (MF) terms, 8{,}336 Biological Process (BP) terms, and 1{,}577 Cellular Component (CC) terms, plus a dedicated \texttt{NULL\_FUNCTION} class for each aspect to flag predicted complete loss of function.
+The decoder output dimensionality is set by the aspect-specific GO vocabularies prepared in the GO annotation / decoder track described above: 3{,}257 Molecular Function (MF), 8{,}335 Biological Process (BP), and 1{,}576 Cellular Component (CC) GO terms, each plus a dedicated \texttt{NULL\_FUNCTION} class (3{,}258, 8{,}336, and 1{,}577 output logits per aspect, respectively) to flag predicted complete loss of function.
 
 \paragraph{Training labels and splits.}
 Decoder training uses the GO annotation / decoder track described in Section~\ref{sec:dataset-description}. Each protein is represented by a multi-hot label vector over the relevant aspect vocabulary, and all three decoder aspects use the same UniRef50-aware protein split as phase~0.
@@ -383,11 +383,11 @@ Decoder comparisons use five \emph{embedding sources} for the same \texttt{FFNDe
 \end{itemize}
 
 \subsection{Encoder: phase~0 (GO pretraining)}
-Phase~0 trains separate encoders per GO aspect (MF, BP, CC) with GO semantic-similarity triplets. Table~\ref{tab:encoder-phase0} reports loss, alignment, uniformity, and MRR on the held-out GO splits at the best validation checkpoint per aspect.
+Phase~0 trains the shared encoder on GO semantic-similarity triplets using separate ontology-specific heads (MF, BP, CC). Table~\ref{tab:encoder-phase0} reports loss, alignment, uniformity, and MRR on the held-out GO splits at the phase~0 best validation checkpoint (lowest combined validation loss), evaluated separately through each ontology head.
 
 \begin{table}[H]
 \centering
-\caption{Encoder metrics on the GO pretraining split at the best phase~0 validation checkpoint, per aspect.}
+\caption{Encoder metrics on the GO pretraining split at the phase~0 best validation checkpoint (single shared encoder), reported per aspect through the corresponding ontology head.}
 \label{tab:encoder-phase0}
 \begin{tabular}{llcccc}
 \hline
@@ -624,7 +624,7 @@ The source code and implementation resources for ContVAR are available in the Gi
 
 \section*{Acknowledgments}
 
-This work was supervised by Prof.\ Tunca Do\u{g}an, with guidance from graduate researchers B\"unyamim \c{S}en and Erva Ulusoy.
+This work was supervised by Prof.\ Tunca Do\u{g}an, with guidance from graduate researchers B\"unyamin \c{S}en and Erva Ulusoy.
 
 \bibliographystyle{IEEEtran}
 \bibliography{reference}
