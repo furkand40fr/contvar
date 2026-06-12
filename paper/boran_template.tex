@@ -19,7 +19,7 @@
 \setlength{\belowcaptionskip}{4pt}
 
 \title{ContVAR: Contrastive Graph Representation Learning for Protein Variant Function Prediction}
-\author{Furkan Dursun \and Boran \c{C}ak{\i}l \and Enes Karaaslan \and Caner Ayvaz}
+\author{Furkan Dursun \and Boran \c{C}ak{\i}l \and Enes Karaarslan \and Caner Ayvaz}
 \date{}
 
 \begin{document}
@@ -115,6 +115,45 @@ Node features concatenate a residue-identity one-hot and a per-residue ESM-2 emb
 \mathbf{x}_i = [\text{AAOneHot}_i \, \| \, \text{ESM2}_i] \in \mathbb{R}^{20+1280} = \mathbb{R}^{1300}.
 \]
 ESM-2 (650M-parameter variant~\cite{lin2023evolutionary}) is chosen as the per-residue feature source because it produces high-quality sequence-contextualized representations without requiring multiple sequence alignment (MSA) construction at inference time. The embeddings are pre-computed and frozen throughout encoder training, so the GATv2 encoder learns mutation-sensitive spatial geometry on top of fixed evolutionary-chemical context rather than attempting to learn both from scratch.
+
+\textbf{GOA annotation file preparation.} Gene Ontology annotations were obtained from the UniProt-GOA GAF distribution ~\cite{uniprot2023,geneontology2021}. Three filters were applied to the raw download to produce \texttt{goa\_2025-12-04\_swissprot\_noiea.tsv}: (i) annotations supported only by the electronic (\texttt{IEA}) evidence code were removed; (ii) only entries with a UniProtKB/Swiss-Prot (manually reviewed) accession were retained; and (iii) isoform-specific accessions (identifiers containing a hyphen, e.g.\ \texttt{P12345-2}) were filtered out, since isoform entries are almost never reviewed and their GO annotations are sparse and predominantly automatic. The resulting file contains 2{,}211{,}880 annotation rows, comprising 1{,}277{,}471 unique protein--GO term pairs over 166{,}613 Swiss-Prot proteins and 27{,}053 distinct GO terms across all three aspects; this protein and term count is further narrowed by the embedding/split intersection and the per-aspect minimum-frequency filter described below and in Section~\ref{sec:dataset-description}. Table~\ref{tab:goa-evidence-codes} reports the evidence-code composition of these rows; by ontology aspect, 36.6\% (809{,}656) are Molecular Function, 34.8\% (770{,}613) Biological Process, and 28.6\% (631{,}611) Cellular Component annotations. The \texttt{ND} (``no biological data'', 1.2\%) rows remaining in this file are additionally excluded during decoder label construction. For reference, the unfiltered UniProt-GOA distribution (all UniProtKB entries, all organisms, all evidence codes including \texttt{IEA}) contains 962{,}163{,}577 annotation rows; the filtered subset above retains $\approx$0.23\% of this total, the remainder being dominated by electronic annotations on unreviewed (TrEMBL) entries across many organisms.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.0}
+\caption{Evidence-code composition of \texttt{goa\_2025-12-04\_swissprot\_noiea.tsv} (2{,}211{,}880 annotation rows; UniProt-GOA Swiss-Prot subset after isoform removal and exclusion of electronic (\texttt{IEA}) annotations). The \texttt{ND} (no biological data) rows are additionally excluded during decoder label construction.}
+\label{tab:goa-evidence-codes}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+\textbf{Code} & \textbf{Description} & \textbf{Count} & \textbf{\%} \\
+\midrule
+IBA & Inferred from Biological aspect of Ancestor    & 441{,}498 & 20.0 \\
+IPI & Inferred from Physical Interaction              & 410{,}672 & 18.6 \\
+IDA & Inferred from Direct Assay                      & 335{,}131 & 15.2 \\
+ISO & Inferred from Sequence Orthology                & 274{,}994 & 12.4 \\
+ISS & Inferred from Sequence or Structural Similarity & 236{,}879 & 10.7 \\
+IMP & Inferred from Mutant Phenotype                  & 180{,}366 &  8.2 \\
+TAS & Traceable Author Statement                      & 132{,}737 &  6.0 \\
+HDA & High Throughput Direct Assay                    &  49{,}516 &  2.2 \\
+IGI & Inferred from Genetic Interaction                &  33{,}445 &  1.5 \\
+NAS & Non-traceable Author Statement                  &  32{,}857 &  1.5 \\
+ND  & No biological Data available                    &  26{,}170 &  1.2 \\
+IEP & Inferred from Expression Pattern                &  19{,}993 &  0.9 \\
+ISM & Inferred from Sequence Model                    &  16{,}276 &  0.7 \\
+EXP & Inferred from Experiment                        &   6{,}411 &  0.3 \\
+IC  & Inferred by Curator                             &   5{,}783 &  0.3 \\
+ISA & Inferred from Sequence Alignment                &   3{,}082 &  0.1 \\
+HMP & High Throughput Mutant Phenotype                &   2{,}032 &  0.1 \\
+RCA & Inferred from Reviewed Computational Analysis   &   1{,}930 &  0.1 \\
+HTP & High Throughput                                 &   1{,}232 &  0.1 \\
+HEP & High Throughput Expression Pattern              &     571 &  0.0 \\
+IGC & Inferred from Genomic Context                   &     240 &  0.0 \\
+HGI & High Throughput Genetic Interaction              &      65 &  0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \textbf{Decoder label preparation.} After encoder training, protein-level graph embeddings are exported to H5 and matched to GOA annotations by UniProt identifier. For each ontology, annotations are converted into multi-hot vectors over GO terms observed in at least ten proteins; a \texttt{NULL\_FUNCTION} output is appended to the vocabulary. Proteins without both an exported embedding and GOA annotation for the selected aspect are excluded from decoder training and evaluation.
 
