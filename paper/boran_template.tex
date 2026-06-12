@@ -77,7 +77,7 @@ Figure~\ref{fig:pipeline} summarizes the ContVAR pipeline in three panels: the e
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/contvar_pipeline_architecture.drawio.pdf}
+  \includegraphics[width=\textwidth,keepaspectratio]{figures/contvar_pipeline_architecture.drawio.png}
   \vspace{-3pt}
   \caption{ContVAR pipeline and model architecture.
   \textbf{(A)}~End-to-end pipeline: AFDB (phase~0/decoder) and AF3 (phase~1 DMS) monomer structures together with frozen ESM-2 features build hybrid residue graphs ($\mathbf{x}_i \in \mathbb{R}^{1300}$, $\mathbf{e}_{ij} \in \mathbb{R}^{20}$, $k{=}16$ per neighbor type); the encoder is trained sequentially in two phases (phase~0 GO semantic triplets, phase~1 DMS contrastive with streaming semi-hard mining) and then frozen; protein-level embeddings $\mathbf{z} \in \mathbb{R}^{256}$ feed three per-aspect FFN decoders whose probabilities yield per-GO LOSS / GAIN / NEUTRAL calls.
