@@ -18,7 +18,7 @@
 \setlength{\belowcaptionskip}{4pt}
 
 \title{ContVAR: Contrastive Graph Representation Learning for Protein Variant Function Prediction}
-\author{}
+\author{Furkan Dursun \and Boran \c{C}ak{\i}l \and Enes Karaaslan \and Caner Ayvaz}
 \date{}
 
 \begin{document}
@@ -91,11 +91,12 @@ ContVAR is organized as two training stages that share a common protein identifi
 Encoder and decoder use different supervision signals---DMS-driven contrastive geometry versus protein-level GO multi-label annotations---and are linked through a persisted encoder checkpoint and protein embeddings keyed by UniProt identifier.
 
 \subsection{Dataset Description}
+\label{sec:dataset-description}
 \textbf{GO (phase~0) track.} Phase~0 consumes residue graphs and ontology-specific semantic-similarity tables under the shared UniRef50-aware protein split~\cite{suzek2015uniref}, which contains 122,190 proteins (97,771 train, 12,093 validation, 12,326 test). Positives use similarity $\geq 0.8$; negatives use similarity $\leq 0.2$ and are sampled from low/mid bins ([0.0,0.1), [0.1,0.2]) for hardness balancing. 
 
 \textbf{DMS (phase~1) track.} The mutagenesis corpus is organized by protein family with one wild-type anchor, multiple positives, and multiple negatives per family. Starting from the ProteinGym Deep Mutational Scanning benchmark~\cite{notin2023proteingym}, we retained proteins with sequence length at most 656 residues, giving 97 unique proteins. When an assay annotated only a protein segment, the corresponding full-length sequence was reconstructed and variant coordinates were remapped to the full-length residue index so that the graph encoder always received complete protein context. For each protein, the positive pool was built from 50 neutral variants selected immediately above the assay cutoff indicating retained-functionality while the negative pool used the 50 lowest-fitness score variants as deleterious examples; selection was sequence-position stratified to reduce clustering in a single domain or local region. This produced exactly 9,700 curated variants before graph construction. The DMS split respects the UniRef50-aware protein split used for phase~0 and decoder training: if a DMS protein is present in that split, the wild type and all of its variants inherit the same train/validation/test assignment; DMS proteins absent from the UniRef50 split are conservatively assigned to training. The resulting fixed DMS split contains 97 families (93 train, 2 validation, 2 test), preventing variant-level leakage across held-out protein families. Raw structures are consumed as mmCIF/CIF files, and per-residue ESM-2 embeddings are loaded from a precomputed store keyed by normalized protein identifiers. Mutated residue positions are parsed from variant filenames during collation and mining.
 
-\textbf{GO annotation / decoder track.} The supervised decoder uses the same UniRef50-aware protein universe and train/validation/test assignment as phase~0, but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations~\cite{uniprot2023,geneontology2021} provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels, and one decoder is trained independently for each ontology. Thus, phase~0 and the decoder share the same protein split by identity, while differing in supervision format: phase~0 uses semantic-similarity triplets, whereas the decoder uses GO multi-hot label vectors.
+\textbf{GO annotation / decoder track.} The supervised decoder uses the same UniRef50-aware splitting strategy as phase~0, but reformulates the data as protein-level multi-label GO prediction rather than semantic triplet learning. Curated UniProt-GOA Swiss-Prot annotations~\cite{uniprot2023,geneontology2021} provide Molecular Function (MF), Biological Process (BP), and Cellular Component (CC) labels after excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The decoder dataset encompasses 123{,}584 proteins grouped into 84{,}151 UniRef50 clusters, partitioned by cluster into 67{,}320 train, 8{,}415 validation, and 8{,}416 test clusters so that no cluster appears in more than one set. The DMS family split inherits this assignment when a DMS protein is present in the UniRef50 mapping. For decoder supervision, GO terms annotated in at least ten proteins are retained, yielding 3{,}258 MF terms, 8{,}336 BP terms, and 1{,}577 CC terms before appending a dedicated \texttt{NULL\_FUNCTION} output. Thus, phase~0 and the decoder share a cluster-aware protein-level split while differing in supervision format: phase~0 uses semantic-similarity triplets, whereas the decoder uses GO multi-hot label vectors.
 
 \textbf{GO function-change cohort.} Because no directly usable dataset links protein variants to GO-level loss- or gain-of-function effects, we constructed a curated cohort from UniProt Swiss-Prot \texttt{variant} and \texttt{mutagenesis} feature descriptions. The cohort converts free-text experimental descriptions into atomic variant--GO effect records with a signed effect label (LOSS or GAIN). After description filtering, GO matching, manual rule-based cleanup, and project-specific sequence-length filtering, the final cohort used in ContVAR contains 6,117 proteins; 17,359 variants; 18,126 variant--GO term matches.
 
@@ -255,11 +256,11 @@ Phase~1 training runs for 200 epochs by default. Optimizer: AdamW (learning rate
 \paragraph{Scope.}
 The decoder consumes protein-level embeddings from the trained encoder (256 dimensions) or, in ablations, raw ESM-2 embeddings (1{,}280 dimensions) or their concatenation (1{,}536 dimensions). It outputs multi-label GO probabilities under Molecular Function (MF), Biological Process (BP), and Cellular Component (CC). One decoder is trained independently per aspect.
 
-\paragraph{GO annotation source and vocabulary.}
-Labels are taken from UniProt-GOA Swiss-Prot~\cite{uniprot2023,geneontology2021}, excluding electronic (\texttt{IEA}) and ``no data'' (\texttt{ND}) evidence codes. The vocabulary retains GO terms annotated in at least ten proteins. Across the dataset, this threshold yields 3{,}258 Molecular Function (MF) terms, 8{,}336 Biological Process (BP) terms, and 1{,}577 Cellular Component (CC) terms. A dedicated \texttt{NULL\_FUNCTION} class is appended to each vocabulary to flag predicted complete loss of function.
+\paragraph{Output vocabulary.}
+The decoder output dimensionality is set by the aspect-specific GO vocabularies prepared in the GO annotation / decoder track described above: 3{,}258 Molecular Function (MF) terms, 8{,}336 Biological Process (BP) terms, and 1{,}577 Cellular Component (CC) terms, plus a dedicated \texttt{NULL\_FUNCTION} class for each aspect to flag predicted complete loss of function.
 
-\paragraph{Dataset and UniRef50-aware splits.}
-The decoder dataset encompasses 123{,}584 proteins grouped into 84{,}151 UniRef50 clusters. Proteins are partitioned by cluster into an 80\%/10\%/10\% split (67{,}320 train, 8{,}415 validation, and 8{,}416 test clusters) so that no cluster appears in more than one set. This same protein-level partition is used by phase~0 and by all three decoder aspects, and the DMS family split inherits it where the DMS protein is present in the UniRef50 mapping. Each protein is represented by a multi-hot label vector over the aspect vocabulary.
+\paragraph{Training labels and splits.}
+Decoder training uses the GO annotation / decoder track described in Section~\ref{sec:dataset-description}. Each protein is represented by a multi-hot label vector over the relevant aspect vocabulary, and all three decoder aspects use the shared UniRef50-aware protein split.
 
 \paragraph{Architecture.}
 \texttt{FFNDecoder} is a feed-forward network. Each hidden block applies batch normalization, ReLU activation, and dropout (tapered by a factor of 0.67 in the last hidden block). The head outputs logits per GO term; sigmoid is applied at inference. Architecture hyperparameters---hidden widths, dropout rate, weight decay, and positive-weight clamp---are selected by a three-stage sequential grid search (described below), independently for each aspect$\times$embedding-type pair.
@@ -298,14 +299,6 @@ The decoder is run on \emph{variant} embeddings only; wild-type GO annotations a
 \end{cases}
 \]
 with default $\theta=0.1$. Variant outputs are therefore \emph{term-resolved} function-change calls rather than a single pooled score over all wild-type annotations.
-
-
-
-\subsubsection{Interactive Hugging Face Space}
-\label{sec:hf-space}
-To make ContVAR accessible beyond offline batch execution, we also provide an interactive Hugging Face Space for structure-level inference. The Space exposes two user workflows. In the single-protein workflow, users upload one PDB or CIF structure and receive ranked GO predictions across MF, BP, and CC. In the WT-versus-variant workflow, users upload matched wild-type and variant structures and receive WT score, variant score, score difference, and a derived gained/lost/stable status for the highest-changing GO terms. Results are displayed as aspect-specific tables and summary panels, with downloadable prediction files for downstream inspection.
-
-The Space runs the same graph-based inference path used by the project: it parses uploaded structures, extracts the amino-acid sequence and residue coordinates, computes ESM-2 residue embeddings on the fly, constructs the hybrid residue graph, applies the trained ContVAR encoder, and decodes GO scores with the per-aspect FFN decoders. The public interface is intended as a lightweight demonstration and inspection layer rather than a replacement for large-scale batch scoring.
 
 \subsection{Evaluation Metrics}
 
@@ -554,6 +547,19 @@ The ontology-specific behavior is also informative. MF is the most strongly anno
 Overall, these results suggest that ContVAR can learn and decode wild-type GO term structure, but the current inference rule and supervision are not sufficient for robust variant-level GOF/LOF discrimination. Phase~0 GO pretraining helps wild-type annotation and often improves LOF specificity, whereas phase~1 DMS specialization increases GOF recall in some settings but does not yield a corresponding MCC gain. The limiting factor is therefore not only representation quality, but also the mismatch between protein-level GO decoder training and signed variant-effect supervision. Future improvements should treat GOF as a rare positive class explicitly, calibrate term-specific gain/loss thresholds, and train or fine-tune on signed variant--GO examples rather than deriving signed effects only from differences in wild-type and variant decoder probabilities.
 
 
+\section{Limitations}
+
+Several limitations should be considered when interpreting the present results. First, phase~1 DMS specialization is trained on a small number of protein families after filtering. The strict UniRef50-aware family-level split is important for avoiding leakage, but it leaves only two validation and two test families, making performance estimates sensitive to family composition and limiting the diversity of mutation-effect patterns available during training.
+
+Second, the available variant-effect supervision does not directly match the final signed GO function-change task. Phase~1 learns from DMS-derived neutral/deleterious contrastive relationships, whereas the final inference problem asks whether a specific variant causes LOSS, GAIN, or NEUTRAL behavior for a specific GO term. The decoder is also trained primarily as a wild-type multi-label GO predictor. As a result, signed variant effects are inferred indirectly from changes in decoded GO probabilities rather than learned from a large supervised collection of variant--GO gain/loss labels.
+
+Third, the curated GO function-change cohort is strongly imbalanced, with many more loss-of-function than gain-of-function records. Accuracy, specificity, and negative predictive value can therefore appear favorable even when balanced association with the signed labels is weak. MCC and minority-class recall show that reliable GOF/LOF discrimination remains unresolved, especially for MF and BP.
+
+Fourth, ContVAR depends on predicted monomer structures and precomputed ESM-2 residue features. This design makes the framework scalable, but it does not explicitly model protein complexes, ligand-bound conformations, membrane environments, post-translational modifications, or dynamic conformational states that may determine the functional effect of some variants. The use of AFDB and AF3 structures also assumes that wild-type structural models provide sufficient context for variant interpretation.
+
+Finally, the current system should be interpreted as a research framework for term-resolved variant function prediction, not as a clinically validated diagnostic tool. Its predictions require external biological validation before use in clinical decision-making or therapeutic prioritization.
+
+
 \section{Conclusion and Future Work}
 
 \subsection{Conclusion}
@@ -566,7 +572,25 @@ The GO function-change cohort provides the most direct test of the intended appl
 Overall, ContVAR establishes a reproducible framework and evaluation path for connecting GO-aware representation learning with variant-level function-change prediction. The main limitation exposed by the study is not the GO function-change cohort itself, but the insufficient size and diversity of variant-effect data available for phase~1 specialization. Larger and more diverse variant datasets will be required for this type of model to learn robust signed GOF/LOF behavior across protein families.
 
 \subsection{Future Work}
-\textit{[Placeholder.]}
+The most immediate direction is to expand the variant-effect supervision used in phase~1. The current DMS specialization is trained on 97 protein families after filtering, with only two validation and two test families under the strict UniRef50-aware split. This design is useful for avoiding leakage, but it leaves too little family diversity for learning a transferable mutation-effect geometry. Future versions should incorporate a larger set of DMS assays, clinically curated variant resources, and experimentally annotated GOF/LOF cases, while retaining protein-family-level separation during evaluation. In particular, phase~1 would benefit from more balanced coverage across enzymes, receptors, binding proteins, localization factors, and regulatory proteins, because signed function change is unlikely to be learned robustly from a narrow collection of assay types.
+
+A second direction is to study the encoder training choices more systematically. Phase~0 currently uses fixed semantic-similarity thresholds and ontology sampling ratios, while phase~1 combines global triplet loss with a mutation-site local contrastive loss under streaming semi-hard negative mining. Future work should evaluate whether adaptive semantic thresholds, ontology-balanced sampling, or  hard-negative mining for phase-0 improve transfer to held-out DMS families. Because the current results show strong phase~0 geometry but weak phase~1 generalization, these ablations would help determine whether the limiting factor is mainly data scale, the contrastive objective, or the way GO-pretrained geometry is specialized for mutation effects.
+
+The local branch of the encoder could also be extended from a single mutated-residue embedding to a small mutation-centered residue neighborhood. This would allow the local contrastive objective to represent nearby spatial interactions around the substituted residue, while preserving the overall monomer-graph setting of the method.
+
+A further direction is to replace the current feed-forward decoder with models that better match the structure of the prediction problem. In this work, the decoder receives a fixed protein embedding and predicts GO terms independently with a multi-label loss. This is a reasonable baseline, but it does not explicitly model dependencies among GO terms, parent--child consistency in the GO graph, or the paired relationship between wild-type and variant embeddings. More suitable decoder designs include hierarchy-aware GO decoders that propagate information over the GO directed acyclic graph, label-attention or transformer-style decoders that learn interactions between protein embeddings and GO-term embeddings, and Siamese or cross-attention decoders that jointly consume wild-type and variant representations. These models would allow the signed decision to be learned from the difference between wild-type and mutant states, instead of deriving LOSS and GAIN only from thresholded variant probabilities.
+
+Future work should also test how reliably the phase~1 variant embedding space transfers to signed GOF/LOF inference. In the current pipeline, the decoder is trained for GO annotation and then applied to variant embeddings produced by the mutation-specialized encoder. This is a reasonable indirect strategy, because phase~1 is intended to move variant embeddings according to functional effect. However, the signed LOSS / GAIN / NEUTRAL decision is still not directly supervised at the variant--GO level. A stronger formulation could fine-tune the decoder on variant--GO pairs with LOSS, GAIN, and NEUTRAL labels, using class-balanced or focal losses to handle the rarity of gain-of-function examples. Term-specific threshold calibration could also improve the current shared threshold rule, since GO terms differ greatly in annotation frequency, biological specificity, and score calibration.
+
+Finally, the encoder and decoder could be trained more tightly within a shared multi-task framework. Instead of treating GO semantic triplets, DMS fitness ranking, wild-type GO annotation, and signed function-change labels as mostly separate stages, future work could optimize these signals jointly or through staged fine-tuning with explicit regularization between objectives. This would test whether ContVAR can move from a reproducible proof-of-concept pipeline toward a more reliable term-resolved predictor of mutation-induced functional change.
+
+\section*{Data and Code Availability}
+
+The source code and implementation resources for ContVAR are available in the GitHub repository \url{https://github.com/HUBioDataLab/ContVAR}. A public Hugging Face Space is also available at \url{https://huggingface.co/spaces/fd55/contvarspace} as an interactive demonstration and inspection interface for structure-level inference. The Space supports two workflows: single-protein GO term prediction from an uploaded PDB or CIF structure, and comparative wild-type/variant prediction from matched structure files. It follows the same inference path used by the project by parsing residue coordinates, computing ESM-2 residue embeddings, constructing the hybrid residue graph, applying the trained ContVAR encoder, and decoding per-aspect GO scores. Outputs are shown as aspect-specific tables and can be downloaded for downstream inspection. The Space is intended for interactive use rather than large-scale batch scoring.
+
+\section*{Acknowledgments}
+
+This work was supervised by Prof.\ Tunca Do\u{g}an, with guidance from graduate researchers B\"unyamim \c{S}en and Erva Ulusoy.
 
 \bibliographystyle{IEEEtran}
 \bibliography{reference}
